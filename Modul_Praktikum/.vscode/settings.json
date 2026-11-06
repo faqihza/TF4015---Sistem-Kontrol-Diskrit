@@ -1,0 +1,9 @@
+{
+	"latex-workshop.latex.autoClean.run": "onBuilt",
+	"latex-workshop.latex.outDir": "%DIR%/modul",
+	"editor.wordWrap": "on",
+	"cSpell.language": "en,id",
+	"editor.fontSize": 18,
+	"window.zoomLevel": 0,
+	"latex-workshop.formatting.latex": "latexindent"
+}

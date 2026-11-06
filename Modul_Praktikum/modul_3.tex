@@ -1,0 +1,752 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[top=3cm,bottom=3cm,left=4cm,right=3cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[htt]{hyphenat}
+\usepackage{xurl}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usetikzlibrary{calc,positioning}
+\usepackage{multirow}
+\pgfplotsset{compat=1.16}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue]{hyperref}
+
+% Istilah dalam Bahasa Indonesia (tanpa babel agar kompatibel di semua TeX)
+\renewcommand{\contentsname}{Daftar Isi}
+\renewcommand{\figurename}{Gambar}
+\renewcommand{\tablename}{Tabel}
+\renewcommand{\lstlistingname}{Kode}
+\renewcommand{\appendixname}{Lampiran}
+\renewcommand{\refname}{Daftar Pustaka}
+
+% Header dan footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Modul 3 -- Kontrol Posisi}
+\fancyhead[R]{\nouppercase{\leftmark}}
+\fancyfoot[L]{TF4015 Sistem Kontrol Diskrit}
+\fancyfoot[R]{\thepage}
+\renewcommand{\footrulewidth}{0.4pt}
+\setlength{\headheight}{14pt}
+
+% Gaya penulisan kode
+\lstset{
+language=C++,
+basicstyle=\ttfamily\footnotesize,
+keywordstyle=\color{blue!70!black}\bfseries,
+commentstyle=\color{green!45!black},
+stringstyle=\color{red!65!black},
+numbers=left,
+numberstyle=\tiny\color{gray},
+frame=single,
+breaklines=true,
+tabsize=2,
+showstringspaces=false,
+columns=fullflexible,
+keepspaces=true,
+morekeywords={byte,uint32_t,String}
+}
+
+% Makro bantu
+% Nama sketch utama program praktikum. Ubah di sini bila nama di repositori berbeda.
+\newcommand{\sketch}{\texttt{SKD23.ino}}
+% Nama file/program dalam teks
+\newcommand{\prog}[1]{\texttt{#1}}
+% Gambar dengan placeholder: bila file belum ada, ditampilkan kotak penanda
+\newcommand{\gambar}[4]{%
+\begin{figure}[H]
+\centering
+\IfFileExists{#1}{%
+\includegraphics[width=#2]{#1}%
+}{%
+\fbox{\parbox[c][4cm][c]{0.7\textwidth}{\centering\small\textcolor{red}{Gambar belum tersedia:}\\\texttt{\detokenize{#1}}}}%
+}
+\caption{#3}
+\label{#4}
+\end{figure}}
+% Kotak catatan / peringatan
+\newcommand{\peringatan}[1]{%
+\begin{center}
+\fcolorbox{red!70!black}{red!5}{\parbox{0.92\textwidth}{\textbf{Peringatan.} #1}}
+\end{center}}
+\newcommand{\catatan}[1]{%
+\begin{center}
+\fcolorbox{blue!60!black}{blue!4}{\parbox{0.92\textwidth}{\textbf{Catatan.} #1}}
+\end{center}}
+
+\renewcommand{\arraystretch}{1.2}
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+\setlength{\emergencystretch}{3em}
+\setlist[itemize]{itemsep=2pt,topsep=4pt}
+\setlist[enumerate]{itemsep=2pt,topsep=4pt}
+
+\begin{document}
+
+% Halaman judul
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+{\large TF4015 -- Sistem Kontrol Diskrit\par}
+\vspace{2.5cm}
+{\Large Praktikum\par}
+\vspace{0.4cm}
+{\huge\bfseries Modul 3\par}
+\vspace{0.4cm}
+{\LARGE Kontrol Posisi\\Motor DC\par}
+\vfill
+% TODO: sesuaikan nama tim pengajar dan asisten
+{\large Tim Pengajar TF4015\par}
+\vspace{0.3cm}
+{\large Program Studi Teknik Fisika\\Fakultas Teknologi Industri\\Institut Teknologi Bandung\par}
+\vspace{0.8cm}
+{\large Semester I 2026/2027\par}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\newpage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\section{Pendahuluan}
+\subsection{Latar Belakang}
+Pengendalian posisi tidak kalah umum dibandingkan pengendalian kecepatan. Aplikasinya antara lain pengendalian bukaan katup, pintu atau palang otomatis, printer dan \textit{3D printer}, serta mesin CNC. Pada Modul 2, kecepatan putar motor DC telah dikontrol menggunakan PID dengan penalaan Ziegler--Nichols, Cohen--Coon, dan penalaan halus. Pada Modul 3, besaran yang dikontrol adalah \textbf{posisi sudut} yang diukur oleh potensiometer.
+
+Model posisi diturunkan dari model kecepatan Modul 1 dengan memperhatikan hubungan antara tachometer dan potensiometer pada kit. Berbeda dengan sistem kecepatan, sistem posisi memiliki sifat \textbf{integrator}: masukan konstan menghasilkan posisi yang terus bertambah. Sifat ini, bersama \textit{deadzone}, waktu tunda, dan bacaan posisi yang berpindah dari 100\% ke 0\%, membuat kontrol posisi pada kit cukup menantang. Parameter awal pengontrol ditentukan dengan metode Ziegler--Nichols kalang tertutup melalui simulasi, lalu diterapkan, ditala, dan diuji terhadap gangguan.
+
+\subsection{Tujuan Praktikum}
+Setelah menyelesaikan Modul 3, praktikan diharapkan mampu:
+\begin{enumerate}
+\item Menurunkan model sistem posisi dari model sistem kecepatan dan memvalidasi faktor konversinya secara eksperimen.
+\item Menala pengontrol posisi dengan metode Ziegler--Nichols kalang tertutup melalui simulasi.
+\item Menyiapkan sistem kontrol posisi dengan memperhatikan ketidaklinieran kit, yaitu batas error, batas aksi kontrol, dan \textit{deadzone}.
+\item Mengimplementasikan kontrol posisi dan menguji performanya terhadap perubahan set point dan gangguan.
+\end{enumerate}
+
+\subsection{Peralatan dan Perangkat Lunak}
+\begin{table}[H]
+\centering
+\caption{Daftar peralatan praktikum Modul 3}
+\label{tab:peralatan}
+\begin{tabularx}{\textwidth}{|c|X|l|}
+\hline
+\textbf{No} & \textbf{Nama Peralatan} & \textbf{Keterangan} \\
+\hline
+1 & Kit praktikum SKD (kit yang sama dengan modul sebelumnya) & Disediakan asisten \\
+2 & Laptop dengan Arduino IDE dan \textit{library} Adafruit MCP4725 & Milik praktikan \\
+3 & MATLAB (desktop atau MATLAB Online) & Milik praktikan \\
+4 & Perangkat lunak \textit{spreadsheet} & Milik praktikan \\
+5 & Program: \prog{5\_control.ino} (versi Modul 2), \prog{10\_main\_kontrol\_posisi} & Unduh dari repositori \\
+6 & Skrip MATLAB \prog{simulasi\_kontrol\_posisi.m} & Unduh dari repositori \\
+7 & Model final Modul 1 dan pengontrol terbaik Modul 2 & Hasil praktikum sebelumnya \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Persiapan Praktikum}
+\begin{enumerate}
+\item Siapkan model final Modul 1 dan tabel spesifikasi kit (terutama masukan minimum putar motor).
+\item Hitung faktor konversi $C$ secara analitik (Bagian~\ref{sec:model_posisi}) dan jalankan skrip \prog{simulasi\_kontrol\_posisi.m} dengan model kelompok.
+\item Pahami program \prog{10\_main\_kontrol\_posisi} (Kode~\ref{lst:main}), terutama fungsi \texttt{wrap\_error()}.
+\item Baca prosedur dan bagian analisis, lalu bagi tugas dalam kelompok. Percobaan~1 dapat dikerjakan sebelum praktikum.
+\end{enumerate}
+
+\section{Teori Dasar}
+\subsection{Hubungan Kecepatan dan Posisi}
+\label{sec:model_posisi}
+Bacaan potensiometer dinyatakan dalam persen satu putaran potensiometer, sedangkan bacaan tachometer dinyatakan dalam persen skala ADC. Misalkan kecepatan terukur $v$ (\%) berbanding lurus dengan kecepatan sudut motor $\omega_m$ (rpm), dengan kecepatan maksimum terukur $v_{maks}$ setara dengan $\omega_{maks}$. Dengan perbandingan roda gigi motor terhadap potensiometer $16:100$ dan tanpa slip, laju perubahan posisi potensiometer $p$ (\%) adalah
+\begin{equation}
+\frac{dp}{dt} = C\,v,
+\qquad
+C = \frac{\omega_{maks}}{v_{maks}} \cdot \frac{1}{60\,000} \cdot \frac{16}{100} \cdot 100\quad [\%/\text{ms per } \%],
+\label{eq:konversi}
+\end{equation}
+dengan faktor $1/60\,000$ mengubah rpm menjadi putaran per milidetik. Bila $\omega_{maks}$ tidak diketahui, asumsikan kecepatan maksimum hasil Modul 1 setara dengan 6400~rpm. Karena asumsi ini belum tentu tepat, nilai $C$ juga akan diukur langsung pada Percobaan~2.
+
+\subsection{Model Sistem Posisi}
+Dengan model kecepatan FOPDT dari Modul 1 dan Persamaan~\eqref{eq:konversi}, model posisi adalah
+\begin{equation}
+G_p(s) = \frac{P(s)}{U(s)} = \frac{C K\,e^{-\theta s}}{s\,(\tau s + 1)}.
+\label{eq:model_posisi}
+\end{equation}
+Faktor $1/s$ menunjukkan bahwa sistem posisi adalah \textbf{integrator}: masukan step menghasilkan posisi yang naik seperti \textit{ramp}, dan sistem kalang terbuka tidak memiliki keadaan tunak. Sistem bertipe satu ini, bila dikontrol dengan pengontrol P, secara teoretis tidak memiliki offset terhadap set point step. Dalam praktik, \textit{deadzone} dan gesekan dapat menyebabkan error tunak kecil.
+
+\subsection{Batas Error Posisi}
+Potensiometer dapat berputar tanpa batas, sehingga bacaan posisi berpindah dari sekitar 100\% ke 0\% (dan sebaliknya). Akibatnya, selisih set point dan posisi dapat bernilai hingga $\pm 100\%$, padahal jarak terpendek ke set point tidak pernah lebih dari setengah putaran. Error posisi perlu dibatasi pada rentang $-50$ hingga $50\%$:
+\begin{equation}
+e = \operatorname{wrap}(r - p) =
+\begin{cases}
+r - p - 100, & r - p > 50, \\
+r - p + 100, & r - p < -50, \\
+r - p, & \text{lainnya}.
+\end{cases}
+\label{eq:wrap}
+\end{equation}
+Dengan demikian motor selalu bergerak melalui jalur terpendek menuju set point.
+
+\subsection{Penalaan Ziegler--Nichols Kalang Tertutup}
+Metode Ziegler--Nichols kurva reaksi pada Modul 2 tidak dapat digunakan langsung karena respons kalang terbuka sistem posisi tidak mencapai keadaan tunak. Sebagai gantinya digunakan metode \textbf{kalang tertutup} (metode gain kritis):
+\begin{enumerate}
+\item Gunakan pengontrol P saja, lalu naikkan $K_p$ hingga respons berosilasi dengan amplitudo tetap. Nilai ini adalah gain kritis $K_{cr}$.
+\item Ukur perioda osilasi tersebut, yaitu perioda kritis $P_{cr}$.
+\item Hitung parameter pengontrol dengan Tabel~\ref{tab:zn_tertutup}.
+\end{enumerate}
+Pada kit praktikum, mencari $K_{cr}$ secara langsung berisiko merusak kit, sehingga langkah ini dilakukan pada simulasi.
+
+\begin{table}[H]
+\centering
+\caption{Parameter Ziegler--Nichols kalang tertutup}
+\label{tab:zn_tertutup}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Kontrol} & $K_p$ & $T_i$ & $T_d$ \\
+\hline
+P & $0{,}5\,K_{cr}$ & -- & -- \\
+PI & $0{,}45\,K_{cr}$ & $P_{cr}/1{,}2$ & -- \\
+PID & $0{,}6\,K_{cr}$ & $P_{cr}/2$ & $P_{cr}/8$ \\
+PID \textit{overshoot} kecil & $0{,}33\,K_{cr}$ & $P_{cr}/2$ & $P_{cr}/3$ \\
+PID tanpa \textit{overshoot} & $0{,}2\,K_{cr}$ & $P_{cr}/2$ & $P_{cr}/3$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Ketidaklinieran pada Kontrol Posisi}
+Beberapa ketidaklinieran berikut perlu ditangani agar kontrol posisi berhasil:
+\begin{itemize}
+\item \textbf{Batas aksi kontrol}. Pada masukan besar, motor berputar terlalu cepat sehingga posisi sulit diamati dan dikontrol. Aksi kontrol perlu dibatasi pada rentang $\pm U_{maks}$ yang ditentukan dari pengamatan kalang terbuka (Percobaan~3).
+\item \textbf{Kompensasi \textit{deadzone}}. Untuk kontrol posisi, yang penting adalah motor mulai bergerak, bukan tachometer mulai membaca. Nilai \textit{deadzone} yang sesuai dapat berbeda dengan yang digunakan pada Modul 2.
+\item \textbf{Osilasi kecil di sekitar set point}. Dengan kompensasi \textit{deadzone}, error yang sangat kecil tetap menghasilkan masukan sebesar \textit{deadzone} sehingga motor dapat bergerak bolak-balik di sekitar set point (\textit{limit cycle}). Salah satu solusinya adalah pita error (\texttt{ErrorBand}): aksi kontrol dibuat nol bila $|e|$ cukup kecil.
+\item \textbf{Bagian integral}. Karena sistem sudah memiliki integrator, aksi integral sering tidak diperlukan dan justru dapat menambah \textit{overshoot}.
+\end{itemize}
+
+\section{Keselamatan Kerja}
+Seluruh ketentuan keselamatan kerja dan SOP pada modul sebelumnya tetap berlaku. Perhatikan pula hal-hal berikut:
+\begin{enumerate}
+\item Sistem posisi sangat sensitif. Mulailah dengan $K_p$ kecil dan batas aksi kontrol kecil, lalu naikkan bertahap.
+\item Bila motor berosilasi keras atau berputar terus-menerus, segera cabut kabel listrik 220~V.
+\item Pada uji gangguan, putar roda gigi potensiometer perlahan dan sebentar saja dengan memegang tepi piringan. Jauhkan jari dari titik pertemuan kedua roda gigi.
+\item Jangan mengubah trimpot penguatan OpAmp.
+\end{enumerate}
+
+\section{Prosedur Praktikum}
+Prosedur Modul 3 terdiri atas empat percobaan. Percobaan~1 dikerjakan di MATLAB dan dapat dikerjakan sebelum praktikum atau secara paralel. Simpan seluruh data mentah ke file teks.
+
+\subsection{Percobaan 1: Pemodelan Sistem dan Simulasi}
+\begin{enumerate}
+\item Hitung faktor konversi $C$ dengan Persamaan~\eqref{eq:konversi}, lalu lengkapi kolom ``analitik'' pada Tabel~\ref{tab:p1_model}. Gunakan waktu cacah pertama dari Modul 1.
+\item Isi parameter model pada skrip \prog{simulasi\_kontrol\_posisi.m} (Kode~\ref{lst:simulasi}) dan amati respons kalang terbuka posisi.
+\item Cari $K_{cr}$ dan $P_{cr}$ secara manual dengan menaikkan \texttt{KpUji} pada bagian 3 skrip hingga respons berosilasi dengan amplitudo tetap. Bandingkan dengan nilai yang dihitung skrip dari model diskrit.
+\item Lengkapi Tabel~\ref{tab:p1_zn} dengan parameter Ziegler--Nichols kalang tertutup dan Tabel~\ref{tab:p1_simulasi} dengan performa simulasinya.
+\end{enumerate}
+
+\begin{table}[H]
+\centering
+\caption{Model sistem kecepatan dan posisi kit praktikum}
+\label{tab:p1_model}
+\begin{tabularx}{\textwidth}{|c|l|C|C|c|}
+\hline
+\textbf{No} & \textbf{Parameter} & \textbf{Analitik} & \textbf{Eksperimen} & \textbf{Satuan} \\
+\hline
+1 & Waktu cacah $T_s$ & \multicolumn{2}{c|}{} & ms \\
+2 & Penguatan $K$ (Modul 1) & \multicolumn{2}{c|}{} & -- \\
+3 & Konstanta waktu $\tau$ (Modul 1) & \multicolumn{2}{c|}{} & ms \\
+4 & Waktu tunda $\theta$ (Modul 1) & \multicolumn{2}{c|}{} & ms \\
+5 & Faktor konversi $C$ & & & \%/(ms$\cdot$\%) \\
+6 & Model posisi $G_p(s)$ & & & -- \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Parameter kontrol Ziegler--Nichols kalang tertutup}
+\label{tab:p1_zn}
+\begin{tabularx}{\textwidth}{|l|C|C|C|C|C|}
+\hline
+\textbf{Kontrol} & \textbf{$K_p$} & \textbf{$T_i$ (ms)} & \textbf{$T_d$ (ms)} & \textbf{$K_i$ (1/ms)} & \textbf{$K_d$ (ms)} \\
+\hline
+P & & -- & -- & -- & -- \\
+PI & & & -- & & -- \\
+PID & & & & & \\
+PID \textit{overshoot} kecil & & & & & \\
+PID tanpa \textit{overshoot} & & & & & \\
+\hline
+\multicolumn{6}{|l|}{$K_{cr}$ = \hspace{3cm} $P_{cr}$ = \hspace{3cm} ms} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Performa simulasi kontrol posisi}
+\label{tab:p1_simulasi}
+\begin{tabularx}{\textwidth}{|l|C|C|C|C|C|}
+\hline
+\textbf{Kontrol} & \textbf{$t_d$ (ms)} & \textbf{$t_r$ (ms)} & \textbf{$M_p$ (\%)} & \textbf{$t_s$ (ms)} & \textbf{Offset (\%)} \\
+\hline
+P & & & & & \\
+PI & & & & & \\
+PID & & & & & \\
+PID \textit{overshoot} kecil & & & & & \\
+PID tanpa \textit{overshoot} & & & & & \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Percobaan 2: Validasi Faktor Konversi Kecepatan--Posisi}
+\begin{enumerate}
+\item Ganti tab \prog{9\_main.ino} dengan program \prog{10\_main\_kontrol\_posisi} dan atur \texttt{ClosedLoop = false}. Unggah, verifikasi tanpa daya motor, lalu hubungkan kabel listrik 220~V.
+\item Kirim masukan \texttt{20} melalui \textit{Serial Monitor}. Setelah kecepatan tunak, rekam data selama sekitar 2 detik, lalu kirim \texttt{0}.
+\item Ulangi untuk masukan \texttt{30} dan \texttt{40}.
+\item Untuk setiap masukan, buka (\textit{unwrap}) bacaan posisi sehingga tidak berpindah dari 100 ke 0, lalu hitung kemiringan posisi terhadap waktu (\%/ms) dengan regresi linier. Bagi kemiringan tersebut dengan rata-rata kecepatan terukur untuk memperoleh $C$.
+\item Lengkapi Tabel~\ref{tab:p2_konversi}, lalu isi kolom ``eksperimen'' pada Tabel~\ref{tab:p1_model} dengan rata-rata nilai $C$. Bila nilai eksperimen berbeda jauh dengan nilai analitik, gunakan nilai eksperimen untuk simulasi selanjutnya.
+\end{enumerate}
+
+\begin{table}[H]
+\centering
+\caption{Pengukuran faktor konversi kecepatan--posisi}
+\label{tab:p2_konversi}
+\begin{tabularx}{\textwidth}{|C|C|C|C|}
+\hline
+\textbf{Masukan (\%)} & \textbf{Kecepatan rata-rata (\%)} & \textbf{Kemiringan posisi (\%/ms)} & \textbf{$C$ (\%/(ms$\cdot$\%))} \\
+\hline
+20 & & & \\
+30 & & & \\
+40 & & & \\
+\hline
+\multicolumn{3}{|r|}{Rata-rata} & \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Percobaan 3: Persiapan Sistem Kontrol}
+\begin{enumerate}
+\item Tetap dengan \texttt{ClosedLoop = false}, kirim berbagai masukan pada rentang $-100$ hingga $100$ (kembali ke \texttt{0} sebelum mengubah arah). Amati bacaan posisi menggunakan \textit{Serial Plotter}.
+\item Klasifikasikan pengamatan secara kualitatif, misalnya: motor tidak bergerak, posisi bergerak pelan dan mudah diamati, atau posisi bergerak terlalu cepat sehingga sulit diamati. Lengkapi Tabel~\ref{tab:p3_klasifikasi}.
+\item Berdasarkan klasifikasi tersebut, tentukan batas aksi kontrol $U_{maks}$ dan isikan pada \texttt{OutputMin} dan \texttt{OutputMax} di \texttt{setup()}.
+\item Periksa kompensasi \textit{deadzone}. Bila perlu, ubah \texttt{DeadZonePositif} dan \texttt{DeadZoneNegatif} sesuai masukan minimum putar motor (Modul 1) agar masukan kecil langsung menggerakkan posisi. Catat nilai yang digunakan.
+\end{enumerate}
+
+\begin{table}[H]
+\centering
+\caption{Klasifikasi pengamatan posisi terhadap masukan}
+\label{tab:p3_klasifikasi}
+\begin{tabularx}{\textwidth}{|c|c|X|}
+\hline
+\textbf{No} & \textbf{Rentang masukan (\%)} & \textbf{Klasifikasi pengamatan} \\
+\hline
+1 & & \\
+2 & & \\
+3 & & \\
+4 & & \\
+5 & & \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Percobaan 4: Implementasi Kontrol Posisi}
+\begin{enumerate}
+\item Atur \texttt{ClosedLoop = true}, \texttt{TimeSampling} $= T_s$, dan \texttt{SetPointSequence = \{50, 20, 50, 90, 20, 50\}}. Program menahan setiap set point selama \texttt{HoldTime}.
+\item Untuk setiap parameter pada Tabel~\ref{tab:p1_zn}, jalankan kontrol posisi dan simpan datanya. Mulailah dengan pengontrol yang paling kecil gainnya. Hitung performa untuk perubahan set point $50 \rightarrow 20$ dan $20 \rightarrow 50$, lalu lengkapi Tabel~\ref{tab:p4_implementasi}.
+\item Lakukan penalaan halus pada pengontrol dengan performa terbaik. Pengontrol yang digunakan tidak harus P, PI, atau PID; PD atau modifikasi lain seperti pita error (\texttt{ErrorBand}) diperbolehkan. Catat setiap modifikasi beserta alasannya.
+\item Apabila performa masih belum memuaskan setelah penalaan halus, modifikasi program lebih lanjut (misalnya kontrol \textit{on-off} dengan histeresis, atau batas aksi kontrol yang berbeda untuk error besar dan kecil).
+\item \textbf{Uji gangguan}: gunakan pengontrol terbaik. Setelah urutan set point selesai, set point terakhir (50) dipertahankan. Berikan gangguan dengan memutar roda gigi potensiometer sedikit secara manual, lalu lepaskan. Simpan respons pengontrolan terhadap gangguan.
+\end{enumerate}
+
+\begin{table}[H]
+\centering
+\caption{Performa implementasi kontrol posisi}
+\label{tab:p4_implementasi}
+\small
+\begin{tabularx}{\textwidth}{|l|c|C|C|C|C|C|}
+\hline
+\textbf{Kontrol} & \textbf{Step} & \textbf{$t_d$ (ms)} & \textbf{$t_r$ (ms)} & \textbf{$M_p$ (\%)} & \textbf{$t_s$ (ms)} & \textbf{Offset (\%)} \\
+\hline
+\multirow{2}{*}{P} & $50 \rightarrow 20$ & & & & & \\
+\cline{2-7}
+& $20 \rightarrow 50$ & & & & & \\
+\hline
+\multirow{2}{*}{PI} & $50 \rightarrow 20$ & & & & & \\
+\cline{2-7}
+& $20 \rightarrow 50$ & & & & & \\
+\hline
+\multirow{2}{*}{PID} & $50 \rightarrow 20$ & & & & & \\
+\cline{2-7}
+& $20 \rightarrow 50$ & & & & & \\
+\hline
+\multirow{2}{*}{PID OS kecil} & $50 \rightarrow 20$ & & & & & \\
+\cline{2-7}
+& $20 \rightarrow 50$ & & & & & \\
+\hline
+\multirow{2}{*}{PID tanpa OS} & $50 \rightarrow 20$ & & & & & \\
+\cline{2-7}
+& $20 \rightarrow 50$ & & & & & \\
+\hline
+\multirow{2}{*}{Penalaan halus} & $50 \rightarrow 20$ & & & & & \\
+\cline{2-7}
+& $20 \rightarrow 50$ & & & & & \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{Laporan dan Analisis}
+\subsection{Ketentuan Laporan}
+% TODO: sesuaikan platform dan tenggat pengumpulan
+Laporan dikumpulkan per kelompok melalui Edunex paling lambat dua minggu setelah praktikum. Nilai tambahan diberikan bila laporan dikumpulkan dalam satu minggu. Laporan berupa file \texttt{.pdf} yang dilampiri \textit{spreadsheet} pengolahan data, data mentah (\texttt{.txt}), program Arduino, dan skrip MATLAB, digabung dalam satu file \texttt{.zip}. Laporan minimal memiliki susunan berikut: latar belakang, tujuan, alat, prosedur, analisis, kesimpulan, kontribusi, dan referensi.
+
+Latar belakang, tujuan, alat, dan prosedur tidak boleh sama persis dengan modul ini. Analisis disusun dengan alur yang runtut dengan menjawab pertanyaan pada Bagian~\ref{sec:analisis}. Perhatikan penggunaan angka penting. Bagian kontribusi berisi Tabel~\ref{tab:kontribusi}.
+
+\begin{table}[H]
+\centering
+\caption{Kontribusi anggota kelompok}
+\label{tab:kontribusi}
+\begin{tabularx}{\textwidth}{|c|c|l|X|}
+\hline
+\textbf{No} & \textbf{NIM} & \textbf{Nama Lengkap} & \textbf{Kontribusi} \\
+\hline
+1 & & & \\
+2 & & & \\
+3 & & & \\
+4 & & & \\
+5 & & & \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Analisis}
+\label{sec:analisis}
+
+\paragraph{Pemodelan sistem dan simulasi.}
+\begin{enumerate}
+\item Uraikan penurunan model posisi dari model kecepatan beserta asumsinya. Bandingkan faktor konversi $C$ analitik dan eksperimen. Asumsi mana yang paling mungkin menyebabkan perbedaan?
+\item Apa yang terjadi pada sistem posisi kalang terbuka ketika diberi masukan step? Mengapa demikian?
+\item Mengapa metode Ziegler--Nichols kurva reaksi tidak dapat digunakan untuk sistem posisi?
+\item Uraikan langkah-langkah memperoleh $K_{cr}$ dan $P_{cr}$ dalam simulasi. Apakah hasil pencarian manual sesuai dengan hasil yang dihitung dari model diskrit?
+\item Berdasarkan simulasi, pengontrol mana yang memberikan performa terbaik? Mengapa aksi integral tidak banyak membantu pada sistem posisi?
+\end{enumerate}
+
+\paragraph{Persiapan sistem kontrol.}
+\begin{enumerate}[resume]
+\item Jelaskan klasifikasi pengamatan kalang terbuka dan bagaimana klasifikasi tersebut digunakan untuk menentukan batas aksi kontrol.
+\item Apakah fungsi kompensasi \textit{deadzone} perlu diubah untuk kontrol posisi? Jelaskan alasannya.
+\item Jelaskan fungsi \texttt{wrap\_error()} pada program kontrol posisi. Apa yang terjadi bila fungsi ini tidak digunakan ketika set point berubah dari 90 ke 20?
+\end{enumerate}
+
+\paragraph{Implementasi kontrol.}
+\begin{enumerate}[resume]
+\item Bagaimana hasil pengontrolan menggunakan parameter Ziegler--Nichols kalang tertutup? Bandingkan dengan hasil simulasi dan jelaskan penyebab perbedaannya.
+\item Apakah kontrol posisi berhasil? Bila tidak, jelaskan penyebabnya. Bila berhasil, pengontrol mana yang menghasilkan performa terbaik?
+\item Jelaskan penalaan halus dan modifikasi program yang dilakukan. Apakah performa menjadi lebih baik?
+\item Apakah terjadi osilasi kecil di sekitar set point? Jelaskan penyebabnya dan bagaimana kelompok mengatasinya.
+\item Tunjukkan performa terbaik yang diperoleh dan lengkapi Tabel~\ref{tab:terbaik}.
+\item Tunjukkan respons sistem dengan pengontrol terbaik terhadap gangguan manual. Apakah posisi kembali ke set point? Berapa lama waktu yang dibutuhkan?
+\end{enumerate}
+
+\begin{table}[H]
+\centering
+\caption{Performa terbaik implementasi kontrol posisi}
+\label{tab:terbaik}
+\begin{tabularx}{\textwidth}{|C|C|C|C|C|C|C|C|}
+\hline
+\textbf{$K_p$} & \textbf{$K_i$} & \textbf{$K_d$} & \textbf{$t_d$ (ms)} & \textbf{$t_r$ (ms)} & \textbf{$M_p$ (\%)} & \textbf{$t_s$ (ms)} & \textbf{Offset (\%)} \\
+\hline
+& & & & & & & \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{Tugas Tambahan}
+Tugas tambahan bersifat opsional dan merupakan persiapan Modul 4.
+\begin{enumerate}
+\item Tuliskan model sistem posisi dalam bentuk ruang keadaan kontinu dengan keadaan $x = [p \;\; v]^T$, lalu diskritkan dengan \textit{zero-order hold}.
+\item Kecepatan bertanda dapat diperoleh dari tachometer dan arah putar motor. Apa kelemahan cara ini? Usulkan cara lain untuk memperoleh kecepatan dari bacaan potensiometer.
+\item Gunakan kecepatan terukur sebagai umpan balik tambahan pada kontrol posisi ($u = K_p e - K_v v$). Bandingkan hasilnya dengan pengontrol PD.
+\end{enumerate}
+
+\begin{thebibliography}{9}
+\bibitem{ogata} K.~Ogata, \textit{Modern Control Engineering}, edisi ke-5. Upper Saddle River, NJ: Prentice Hall, 2010.
+\bibitem{seborg} D.~E. Seborg, T.~F. Edgar, D.~A. Mellichamp, dan F.~J. Doyle III, \textit{Process Dynamics and Control}, edisi ke-4. Hoboken, NJ: Wiley, 2016.
+\end{thebibliography}
+
+\clearpage
+\appendix
+\section{Kode Program Pendukung}
+\label{lamp:kode}
+Program utama berikut menggantikan isi tab \prog{9\_main.ino}. Tab \prog{5\_control.ino} yang digunakan adalah versi Modul 2.
+
+\begin{lstlisting}[caption={Program utama \texttt{10\_main\_kontrol\_posisi}},label={lst:main}]
+// ===========================================================================
+// Program utama Modul 3: kontrol posisi motor DC
+// Ganti isi tab 9_main.ino dengan program ini.
+//
+// ClosedLoop = false : kalang terbuka, masukan motor dikirim melalui
+//                      Serial Monitor (-100 hingga 100).
+// ClosedLoop = true  : kontrol posisi dengan set point mengikuti
+//                      SetPointSequence[]. Setelah urutan selesai, set point
+//                      terakhir dipertahankan (untuk uji gangguan).
+// Error posisi dibatasi pada rentang -50 hingga 50 karena bacaan posisi
+// berpindah dari 100 ke 0 (dan sebaliknya).
+// ===========================================================================
+
+unsigned long Time, StartTime, LastTime, StepStart;
+unsigned int TimeSampling = 10, DeltaTime;   // waktu cacah (ms)
+unsigned int HoldTime = 3000;                // lama tiap set point (ms)
+bool ClosedLoop = true;
+float ErrorBand = 0.0;                       // pita error (%) tempat keluaran dibuat nol
+
+float SetPointSequence[] = {50, 20, 50, 90, 20, 50};
+const byte SequenceLength = sizeof(SetPointSequence) / sizeof(SetPointSequence[0]);
+
+byte Index = 0;
+int InputSerial = 0;
+float SetPoint = 0.0, Position = 0.0, Speed = 0.0, Error = 0.0;
+float ManipulatedVariable = 0.0, Motor = 0.0;
+
+float wrap_error(float e) {
+  while (e > 50.0) e -= 100.0;
+  while (e < -50.0) e += 100.0;
+  return e;
+}
+
+void setup() {
+  general_setup();
+  sensor_setup();
+  actuator_setup();
+
+  // Parameter pengontrol (Ki dalam 1/ms, Kd dalam ms)
+  Kp = 1.0;
+  Ki = 0.0;
+  Kd = 0.0;
+  OutputMin = -40.0;   // batas aksi kontrol sesuai klasifikasi kalang terbuka
+  OutputMax = 40.0;
+  control_reset();
+
+  Serial.println("Time\tDelta\tSP\tPos\tKec\tMV\tMotor");
+  StartTime = millis();
+  LastTime = StartTime;
+  StepStart = StartTime;
+}
+
+void loop() {
+  InputSerial = serial(InputSerial);
+  Time = millis();
+  if (Time - LastTime >= TimeSampling) {
+    DeltaTime = Time - LastTime;
+    LastTime = Time;
+
+    Position = smooth_position_percentage();
+    Speed = smooth_velocity_percentage();
+
+    if (ClosedLoop) {
+      SetPoint = SetPointSequence[Index];
+      Error = wrap_error(SetPoint - Position);
+      ManipulatedVariable = control(Error, TimeSampling);
+      if (Error <= ErrorBand && Error >= -ErrorBand) ManipulatedVariable = 0.0;
+    }
+    else {
+      SetPoint = 0.0;
+      ManipulatedVariable = (float) InputSerial;
+    }
+
+    Motor = run_motor(compensation(ManipulatedVariable));
+
+    Serial.print(Time - StartTime);
+    Serial.print("\t");
+    Serial.print(DeltaTime);
+    Serial.print("\t");
+    Serial.print(SetPoint);
+    Serial.print("\t");
+    Serial.print(Position);
+    Serial.print("\t");
+    Serial.print(Speed);
+    Serial.print("\t");
+    Serial.print(ManipulatedVariable);
+    Serial.print("\t");
+    Serial.println(Motor);
+
+    if (ClosedLoop && Index < SequenceLength - 1 && Time - StepStart >= HoldTime) {
+      StepStart = Time;
+      Index++;
+    }
+  }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=Matlab, morekeywords={yline,stairs,eig,angle}, caption={Skrip MATLAB \texttt{simulasi\_kontrol\_posisi.m}},label={lst:simulasi}]
+%% simulasi_kontrol_posisi.m
+% Simulasi kontrol posisi motor DC (Modul 3).
+% Model posisi diturunkan dari model kecepatan (Modul 1):
+%   G_p(s) = C * K * exp(-Theta s) / ( s (Tau s + 1) )
+% dengan C adalah faktor konversi kecepatan (%) ke laju posisi (%/ms).
+%
+% Skrip ini:
+%   1. mensimulasikan respons kalang terbuka posisi,
+%   2. mensimulasikan kontrol P dengan Kp uji untuk mencari Kcr dan Pcr
+%      secara manual (metode Ziegler-Nichols kalang tertutup),
+%   3. menghitung Kcr dan Pcr dari model diskrit sebagai pembanding,
+%   4. mensimulasikan parameter Ziegler-Nichols kalang tertutup dan kustom.
+
+clc; clear; close all;
+
+%% 1. Model sistem (waktu dalam ms)
+K     = 0.85;      % penguatan model kecepatan (Modul 1)
+Tau   = 60;        % konstanta waktu (ms)
+Theta = 30;        % waktu tunda (ms)
+C     = 0.02;      % konversi kecepatan ke laju posisi (%/ms per %), dari Percobaan 2
+Ts    = 10;        % waktu cacah (ms), gunakan waktu cacah pertama
+
+UMax     = 40;     % batas aksi kontrol (%)
+Awal     = 50;     % posisi awal (%)
+SetPoint = 70;     % set point posisi (%)
+TSim     = 3000;   % durasi simulasi (ms)
+
+%% 2. Kalang terbuka: masukan step 20%
+[t, p] = simulasi(K, Tau, Theta, C, Ts, Awal, 0, TSim, 0, 0, 0, UMax, 20);
+figure('Name', 'Kalang terbuka');
+plot(t, p, 'LineWidth', 1.2); grid on;
+xlabel('Waktu (ms)'); ylabel('Posisi (%, tanpa batas 0-100)');
+title('Respons posisi kalang terbuka untuk masukan step 20%');
+
+%% 3. Mencari Kcr dan Pcr secara manual
+% Naikkan KpUji sampai respons berosilasi dengan amplitudo tetap.
+KpUji = 1.0;
+[t, p] = simulasi(K, Tau, Theta, C, Ts, Awal, SetPoint, TSim, KpUji, 0, 0, Inf, []);
+figure('Name', 'Uji Kcr');
+stairs(t, p); grid on; yline(SetPoint, 'k--');
+xlabel('Waktu (ms)'); ylabel('Posisi (%)'); title(sprintf('Kontrol P, Kp = %g', KpUji));
+
+%% 4. Pembanding: Kcr dan Pcr dari model diskrit
+[Kcr, Pcr] = titik_kritis(K, Tau, Theta, C, Ts);
+fprintf('Dari model diskrit: Kcr = %.3f, Pcr = %.1f ms\n', Kcr, Pcr);
+
+%% 5. Ziegler-Nichols kalang tertutup
+% baris: P, PI, PID, PID overshoot kecil, PID tanpa overshoot; kolom: Kp, Ti, Td
+ZN = [ 0.5*Kcr,   Inf,      0;
+       0.45*Kcr,  Pcr/1.2,  0;
+       0.6*Kcr,   Pcr/2,    Pcr/8;
+       0.33*Kcr,  Pcr/2,    Pcr/3;
+       0.2*Kcr,   Pcr/2,    Pcr/3 ];
+Nama = {'P', 'PI', 'PID', 'PID OS kecil', 'PID tanpa OS'};
+figure('Name', 'Ziegler-Nichols kalang tertutup'); hold on; grid on;
+fprintf('\n%-13s %8s %8s %7s %9s %8s | %7s %7s %6s %7s %7s\n', 'Kontrol', 'Kp', 'Ti', 'Td', 'Ki', 'Kd', ...
+    'td', 'tr', 'OS', 'ts', 'offset');
+for j = 1:5
+    Kp = ZN(j, 1);
+    if isinf(ZN(j, 2)), Ki = 0; else, Ki = Kp / ZN(j, 2); end
+    Kd = Kp * ZN(j, 3);
+    [t, p] = simulasi(K, Tau, Theta, C, Ts, Awal, SetPoint, TSim, Kp, Ki, Kd, UMax, []);
+    P = kinerja(t, p, Awal, SetPoint);
+    fprintf('%-13s %8.3f %8.1f %7.1f %9.5f %8.2f | %7.1f %7.1f %6.1f %7.1f %7.2f\n', ...
+        Nama{j}, Kp, ZN(j,2), ZN(j,3), Ki, Kd, P);
+    stairs(t, p, 'DisplayName', Nama{j});
+end
+yline(SetPoint, 'k--', 'HandleVisibility', 'off');
+xlabel('Waktu (ms)'); ylabel('Posisi (%)'); legend('Location', 'southeast');
+
+%% 6. Parameter kustom
+KpKustom = 0.6; KiKustom = 0; KdKustom = 20;
+[t, p] = simulasi(K, Tau, Theta, C, Ts, Awal, SetPoint, TSim, KpKustom, KiKustom, KdKustom, UMax, []);
+P = kinerja(t, p, Awal, SetPoint);
+fprintf('\nKustom: td=%.1f tr=%.1f OS=%.1f ts=%.1f offset=%.2f\n', P);
+figure('Name', 'Kustom'); stairs(t, p); grid on; yline(SetPoint, 'k--');
+xlabel('Waktu (ms)'); ylabel('Posisi (%)'); title('Parameter kustom');
+
+%% Fungsi bantu
+function [tk, pk] = simulasi(K, Tau, Theta, C, Ts, P0, SP, TSim, Kp, Ki, Kd, UMax, UBuka)
+    % Bila UBuka tidak kosong, simulasi kalang terbuka dengan masukan UBuka.
+    N = TSim; d = round(Theta);
+    ubuf = zeros(N + d + 1, 1);
+    v = 0; p = P0; u = 0; Acc = 0; LastE = 0; First = true;
+    nk = floor((N - 1) / Ts) + 1; tk = zeros(nk, 1); pk = zeros(nk, 1); i = 0;
+    for k = 0:N-1
+        if mod(k, Ts) == 0
+            if isempty(UBuka)
+                e = SP - p;
+                de = 0; if ~First, de = (e - LastE) / Ts; end
+                First = false;
+                u = Kp*e + Ki*(Acc + e*Ts) + Kd*de;
+                if u > UMax
+                    u = UMax; if e < 0, Acc = Acc + e*Ts; end
+                elseif u < -UMax
+                    u = -UMax; if e > 0, Acc = Acc + e*Ts; end
+                else
+                    Acc = Acc + e*Ts;
+                end
+                LastE = e;
+            else
+                u = UBuka;
+            end
+            i = i + 1; tk(i) = k; pk(i) = p;
+        end
+        ubuf(k + 1 + d) = u;
+        v = v + (K*ubuf(k + 1) - v) / Tau;   % kecepatan (%)
+        p = p + C*v;                         % posisi (%), langkah 1 ms
+    end
+end
+
+function [Kcr, Pcr] = titik_kritis(K, Tau, Theta, C, Ts)
+    % Gain P terkecil yang membuat model diskrit (dengan waktu tunda) tidak stabil
+    a = exp(-Ts/Tau);
+    A = [1, C*Tau*(1 - a); 0, a];
+    B = [C*K*(Ts - Tau*(1 - a)); K*(1 - a)];
+    d = round(Theta/Ts);
+    Kcr = NaN; Pcr = NaN;
+    for Kp = 0.005:0.005:50
+        M = matriks_tertutup(A, B, d, Kp);
+        ev = eig(M);
+        [rho, idx] = max(abs(ev));
+        if rho > 1
+            Kcr = Kp;
+            Pcr = 2*pi / abs(angle(ev(idx))) * Ts;
+            return;
+        end
+    end
+end
+
+function M = matriks_tertutup(A, B, d, Kp)
+    % Keadaan: [posisi; kecepatan; u[k-1]; ...; u[k-d]], u[k] = -Kp*posisi
+    n = 2 + d;
+    M = zeros(n);
+    M(1:2, 1:2) = A;
+    if d == 0
+        M(1:2, 1) = M(1:2, 1) - Kp*B;
+    else
+        M(1:2, n) = B;
+        M(3, 1) = -Kp;
+        for i = 2:d
+            M(2 + i, 1 + i) = 1;
+        end
+    end
+end
+
+function P = kinerja(t, y, Awal, SP)
+    % [delay time, rise time 10-90%, overshoot, settling time 2%, offset] terhadap perubahan set point
+    s = (y - Awal) / (SP - Awal);
+    sf = mean(s(end - max(1, round(0.1*numel(s))) + 1:end));
+    td = waktu_pertama(t, s >= 0.5);
+    tr = waktu_pertama(t, s >= 0.9) - waktu_pertama(t, s >= 0.1);
+    OS = max(0, (max(s) - 1) * 100);
+    luar = find(abs(s - 1) > 0.02);
+    if isempty(luar), ts = t(1); elseif luar(end) < numel(t), ts = t(luar(end) + 1); else, ts = NaN; end
+    P = [td, tr, OS, ts, (1 - sf)*(SP - Awal)];
+end
+
+function tw = waktu_pertama(t, Kondisi)
+    k = find(Kondisi, 1);
+    if isempty(k), tw = NaN; else, tw = t(k); end
+end
+\end{lstlisting}
+
+\end{document}

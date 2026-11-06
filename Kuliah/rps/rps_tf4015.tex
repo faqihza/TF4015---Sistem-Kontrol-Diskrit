@@ -1,0 +1,467 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage[table]{xcolor}
+\usepackage{pdflscape}
+\usepackage{float}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{xurl}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+% ---------------------------------------------------------------------------
+% Istilah dalam Bahasa Indonesia
+% ---------------------------------------------------------------------------
+\renewcommand{\contentsname}{Daftar Isi}
+\renewcommand{\tablename}{Tabel}
+\renewcommand{\figurename}{Gambar}
+
+% ---------------------------------------------------------------------------
+% Header dan footer
+% ---------------------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{RPS TF4015 Sistem Kontrol Diskrit}
+\fancyhead[R]{Semester I 2026/2027}
+\fancyfoot[L]{Program Studi Teknik Fisika -- FTI ITB}
+\fancyfoot[R]{\thepage}
+\renewcommand{\footrulewidth}{0.4pt}
+\setlength{\headheight}{14pt}
+
+% ---------------------------------------------------------------------------
+% Makro bantu
+% ---------------------------------------------------------------------------
+\definecolor{skdblue}{HTML}{1F3A68}
+\definecolor{skdlight}{HTML}{E8EEF7}
+% Teks bilingual: Indonesia lalu Inggris (miring, abu-abu)
+\newcommand{\en}[1]{{\color{black!60}\textit{#1}}}
+\newcommand{\bil}[2]{#1\newline\en{#2}}
+% Judul bagian bilingual
+\newcommand{\bsection}[2]{\Needspace{12\baselineskip}\section[#1 / #2]{#1\\[-2pt]{\large\en{#2}}}}
+\newcommand{\bsubsection}[2]{\Needspace{8\baselineskip}\subsection[#1 / #2]{#1 \en{/ #2}}}
+% Rujukan buku teks
+\newcommand{\FR}{[FR]}
+\newcommand{\OG}{[OG]}
+\newcommand{\PH}{[PH]}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\setlist[itemize]{itemsep=1pt,topsep=3pt,leftmargin=1.4em}
+\setlist[enumerate]{itemsep=1pt,topsep=3pt,leftmargin=1.6em}
+\renewcommand{\arraystretch}{1.25}
+
+\begin{document}
+
+% ===========================================================================
+% Halaman judul
+% ===========================================================================
+\begin{titlepage}
+	\centering
+	\vspace*{1.5cm}
+	{\large Program Studi Teknik Fisika\\Fakultas Teknologi Industri\\Institut Teknologi Bandung\par}
+	\vspace{2.5cm}
+	{\Large Rencana Pembelajaran Semester (RPS)\par}
+	{\large\en{Semester Learning Plan}\par}
+	\vspace{1.2cm}
+	{\color{skdblue}\rule{0.8\textwidth}{1.2pt}\par}
+	\vspace{0.4cm}
+	{\huge\bfseries TF4015\par}
+	\vspace{0.3cm}
+	{\LARGE\bfseries Sistem Kontrol Diskrit\par}
+	\vspace{0.2cm}
+	{\Large\en{Discrete-Time Control Systems}\par}
+	\vspace{0.4cm}
+	{\color{skdblue}\rule{0.8\textwidth}{1.2pt}\par}
+	\vspace{1.2cm}
+	{\large 3 SKS \,|\, Semester I 2026/2027\par}
+	\vfill
+	{\large Tim Dosen / \en{Lecturers}\par}
+	\vspace{0.3cm}
+	Ir. Estiyanti Ekawati, M.T., Ph.D. \quad \texttt{esti@itb.ac.id}\\
+	Faqihza Mukhlish, S.T., M.T., Ph.D. \quad \texttt{faqihza.m@itb.ac.id}\par
+	\vspace{1cm}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ===========================================================================
+\bsection{Identitas Mata Kuliah}{Course Identity}
+% ===========================================================================
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{@{}L{5.2cm}Y@{}}
+		\toprule
+		\bil{Kode / Nama}{Code / Name}                 & TF4015 Sistem Kontrol Diskrit \en{(Discrete-Time Control Systems)} \\
+		\bil{Bobot}{Credits}                           & 3 SKS (kuliah dan praktikum terintegrasi) \\
+		\bil{Semester}{Semester}                       & Semester I 2026/2027 % TODO: sesuaikan
+		\\
+		\bil{Sifat}{Status}                            & Wajib / pilihan % TODO: sesuaikan dengan kurikulum
+		\\
+		\bil{Prasyarat}{Prerequisites}                 & Sistem Kontrol Otomatik (kontrol kontinu), Matematika Teknik (transformasi Laplace), dasar pemrograman % TODO: sesuaikan kode MK prasyarat
+		\\
+		\bil{Perangkat lunak}{Software}                & MATLAB/Simulink (atau Python: \texttt{numpy}, \texttt{scipy.signal}, \texttt{python-control}), Arduino IDE \\
+		\bil{Perangkat keras}{Hardware}                & Kit praktikum SKD (motor DC, tachometer, potensiometer, Arduino UNO, PCB \textit{shield}) \\
+		\bil{Dosen}{Lecturers}                         & Ir. Estiyanti Ekawati, M.T., Ph.D. (\texttt{esti@itb.ac.id})\newline
+		                                                 Faqihza Mukhlish, S.T., M.T., Ph.D. (\texttt{faqihza.m@itb.ac.id}) \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+\bsubsection{Deskripsi Mata Kuliah}{Course Description}
+Kuliah Sistem Kontrol Diskrit mempersiapkan mahasiswa untuk merancang sistem kontrol diskrit dengan metode heuristik maupun analitik serta menerapkannya dengan perangkat mikroprosesor untuk memenuhi kriteria kestabilan dan kinerja sistem dinamik yang ditetapkan oleh standar internasional.
+
+\en{This course prepares students to design discrete-time control systems using both heuristic and analytical methods, and to implement them on microprocessor-based hardware so as to meet the stability and dynamic-performance criteria set by international standards.}
+
+\bsubsection{Buku Teks}{Textbooks}
+\begin{enumerate}[label={[\arabic*]}]
+	\item[\FR] Franklin, G.~F., Powell, J.~D., and Emami-Naeini, A., \textit{Feedback Control of Dynamic Systems}, 8th ed., Pearson, 2018.
+	\item[\OG] Ogata, K., \textit{Discrete-Time Control Systems}, 2nd ed., Pearson India, 2015.
+	\item[\PH] Phillips, C.~L., Nagle, H.~T., and Chakrabortty, A., \textit{Digital Control System Analysis \& Design}, 4th ed., Pearson, 2014.
+\end{enumerate}
+Bahan pendukung: slide kuliah, catatan kuliah (diktat), modul praktikum SKD (Modul 0--4), dan program simulasi pada repositori mata kuliah.\\
+\en{Supporting material: lecture slides, lecture notes, SKD lab modules (Modules 0--4), and simulation code in the course repository.}
+
+% ===========================================================================
+\bsection{Capaian Pembelajaran}{Learning Outcomes}
+% ===========================================================================
+\bsubsection{Capaian Pembelajaran Program Studi (CPL)}{Program Learning Outcomes}
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{@{}l Y@{}}
+		\toprule
+		\textbf{Kode} & \textbf{CPL} \\
+		\midrule
+		\multicolumn{2}{@{}l}{\textbf{Problem Solving}} \\
+		PS1 & \bil{Memodelkan masalah teknis dengan menerapkan prinsip matematika maupun sains}{Model engineering problems by applying mathematical and scientific principles} \\
+		PS2 & \bil{Mencari solusi atas permasalahan teknis secara analitikal maupun komputasional}{Find solutions to engineering problems analytically and computationally} \\
+		\midrule
+		\multicolumn{2}{@{}l}{\textbf{Design}} \\
+		D1 & \bil{Mengidentifikasi kebutuhan pengguna serta merumuskan obyektif dan batasan proyek}{Identify user needs and formulate project objectives and constraints} \\
+		D2 & \bil{Merancang sistem sesuai solusi menggunakan metode dan alat desain yang sesuai}{Design a system according to the solution using appropriate design methods and tools} \\
+		D3 & \bil{Membuktikan kelayakan rancangan menggunakan metode analitikal maupun komputasional}{Verify design feasibility using analytical and computational methods} \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+\bsubsection{Capaian Pembelajaran Mata Kuliah (CPMK)}{Course Learning Outcomes}
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{@{}l Y@{}}
+		\toprule
+		\textbf{Kode} & \textbf{CPMK} \\
+		\midrule
+		CPMK-1 & \bil{Mengidentifikasi fenomena kontrol diskrit dan merumuskan modelnya}{Identify discrete-time control phenomena and formulate their models} \\
+		CPMK-2 & \bil{Menganalisis kestabilan dan kinerja suatu sistem kontrol diskrit secara sistematik}{Systematically analyse the stability and performance of a discrete-time control system} \\
+		CPMK-3 & \bil{Menerapkan metode heuristik dan analitik untuk merancang sistem kontrol diskrit yang memenuhi kriteria kinerja sesuai standar internasional}{Apply heuristic and analytical methods to design discrete-time control systems that meet performance criteria according to international standards} \\
+		CPMK-4 & \bil{Menggunakan perangkat lunak simulasi sistem untuk mendukung analisis dan perancangan sistem kontrol diskrit}{Use system simulation software to support the analysis and design of discrete-time control systems} \\
+		CPMK-5 & \bil{Mengoperasikan dan mengimplementasikan rancangan sistem kontrol diskrit menggunakan perangkat mikroprosesor}{Operate and implement discrete-time control designs on microprocessor hardware} \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+\bsubsection{Pemetaan CPMK terhadap CPL}{Mapping of Course to Program Outcomes}
+\begin{table}[H]
+	\centering
+	\begin{tabular}{@{}lccccc@{}}
+		\toprule
+		       & \textbf{PS1} & \textbf{PS2} & \textbf{D1} & \textbf{D2} & \textbf{D3} \\
+		\midrule
+		CPMK-1 & \checkmark   &              &             &             &             \\
+		CPMK-2 & \checkmark   & \checkmark   &             &             &             \\
+		CPMK-3 &              & \checkmark   & \checkmark  & \checkmark  &             \\
+		CPMK-4 &              & \checkmark   &             &             & \checkmark  \\
+		CPMK-5 &              &              & \checkmark  & \checkmark  & \checkmark  \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\bsubsection{Sub-CPMK}{Sub-Learning Outcomes}
+Sub-CPMK berikut menjadi acuan setiap pertemuan pada Bagian~\ref{sec:rencana}.\\
+\en{The following sub-outcomes are referenced by each meeting in Section~\ref{sec:rencana}.}
+
+\begin{longtable}{@{}l L{11.3cm} l@{}}
+	\toprule
+	\textbf{Kode} & \textbf{Sub-CPMK} & \textbf{CPMK} \\
+	\midrule
+	\endhead
+	S1  & \bil{Menjelaskan struktur sistem kontrol digital dan meninjau kembali pemodelan, spesifikasi kinerja, serta pengontrol PID kontinu}{Explain the structure of a digital control system and review continuous-time modelling, performance specifications, and PID control} & 1 \\
+	S2  & \bil{Menjelaskan proses pencacahan, kuantisasi, rekonstruksi, dan \textit{aliasing}, serta memilih waktu cacah}{Explain sampling, quantisation, reconstruction, and aliasing, and select a sampling period} & 1 \\
+	S3  & \bil{Memodelkan sistem diskrit dengan persamaan beda dan menyelesaikannya menggunakan transformasi Z}{Model discrete-time systems with difference equations and solve them using the Z-transform} & 1 \\
+	S4  & \bil{Menurunkan fungsi transfer pulsa sistem tercacah dengan ZOH dan mengidentifikasi model empiris dari data}{Derive the pulse transfer function of a sampled system with ZOH and identify empirical models from data} & 1, 4 \\
+	S5  & \bil{Mendiskritisasi pengontrol kontinu (emulasi) dan mengimplementasikan PID diskrit beserta penalaan heuristiknya}{Discretise continuous controllers (emulation) and implement a discrete PID with heuristic tuning} & 3, 5 \\
+	S6  & \bil{Menganalisis respons transien dan keadaan tunak di bidang $z$ terhadap kriteria kinerja}{Analyse transient and steady-state response in the $z$-plane against performance criteria} & 2, 4 \\
+	S7  & \bil{Menguji kestabilan sistem kontrol diskrit dan menganalisis pengaruh waktu cacah serta waktu tunda}{Test the stability of discrete-time control systems and analyse the effect of sampling period and delay} & 2 \\
+	S8  & \bil{Merancang kompensator diskrit dengan metode tempat kedudukan akar (\textit{root locus}) di bidang $z$}{Design discrete compensators using root locus in the $z$-plane} & 3, 4 \\
+	S9  & \bil{Merancang pengontrol diskrit menggunakan respons frekuensi (bidang $w$) dan metode langsung (\textit{deadbeat})}{Design discrete controllers using frequency response ($w$-plane) and direct methods (deadbeat)} & 3 \\
+	S10 & \bil{Memodelkan sistem dalam ruang keadaan diskrit dan menganalisis keterkendalian dan keteramatan}{Model systems in discrete state space and analyse controllability and observability} & 1, 2 \\
+	S11 & \bil{Merancang umpan balik keadaan dengan penempatan kutub, termasuk aksi integral}{Design state feedback by pole placement, including integral action} & 3, 5 \\
+	S12 & \bil{Merancang pengamat (\textit{observer}) keadaan dan menggabungkannya dengan umpan balik keadaan}{Design state observers and combine them with state feedback} & 3 \\
+	S13 & \bil{Merancang pengontrol kuadratik optimal (LQR) dan memahami estimasi optimal (filter Kalman, LQG)}{Design quadratic optimal controllers (LQR) and understand optimal estimation (Kalman filter, LQG)} & 3, 4 \\
+	S14 & \bil{Mengevaluasi isu implementasi pengontrol digital pada mikroprosesor dan mempresentasikan hasil rancangan}{Evaluate implementation issues of digital controllers on microprocessors and present design results} & 4, 5 \\
+	\bottomrule
+\end{longtable}
+
+% ===========================================================================
+\bsection{Kriteria Kinerja Acuan}{Reference Performance Criteria}
+% ===========================================================================
+Sepanjang semester, analisis dan perancangan dinilai terhadap kriteria berikut. Nilai sasaran setiap tugas ditetapkan pada lembar tugas masing-masing.\\
+\en{Throughout the semester, analysis and design are evaluated against the following criteria. Target values for each assignment are stated in its own brief.}
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{@{}L{3.6cm} Y L{4.2cm}@{}}
+		\toprule
+		\textbf{Aspek} & \textbf{Kriteria} & \textbf{Dibahas} \\
+		\midrule
+		\bil{Kestabilan}{Stability}                  & Kestabilan BIBO dan asimtotik; kutub di dalam lingkaran satuan; margin penguatan (GM) dan margin fasa (PM); puncak sensitivitas $M_s$ & Pertemuan 7, 10 \\
+		\bil{Respons transien}{Transient response}   & Waktu naik $t_r$, waktu puncak $t_p$, lewatan maksimum $M_p$, waktu turun $t_s$ (kriteria 2\%), rasio redaman $\zeta$ & Pertemuan 1, 6 \\
+		\bil{Keadaan tunak}{Steady state}            & Galat keadaan tunak, tipe sistem, konstanta galat $K_p, K_v, K_a$ & Pertemuan 6 \\
+		\bil{Indeks integral}{Integral indices}      & IAE, ISE, ITAE; indeks kuadratik $J = \sum (x^\top Q x + u^\top R u)$ & Pertemuan 6, 14 \\
+		\bil{Penolakan gangguan}{Disturbance rejection} & Respons terhadap gangguan beban dan derau pengukuran; usaha kontrol dan saturasi aktuator & Pertemuan 5, 9, 15 \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+% TODO: konfirmasi standar internasional yang dijadikan acuan prodi.
+% Kandidat: IEC 60546-1 (metode evaluasi kinerja pengontrol proses industri) dan
+% IEC 61131-3 (implementasi blok fungsi pengontrol pada PLC).
+Acuan standar: metode evaluasi kinerja pengontrol proses industri (misalnya IEC~60546-1) dan praktik implementasi blok fungsi pengontrol (misalnya IEC~61131-3).\\
+\en{Standards referenced: evaluation methods for industrial-process controller performance (e.g.\ IEC~60546-1) and controller function-block implementation practice (e.g.\ IEC~61131-3).}
+
+% ===========================================================================
+\bsection{Rencana Pembelajaran Mingguan}{Weekly Learning Plan}
+\label{sec:rencana}
+% ===========================================================================
+Singkatan rujukan: \FR\ Franklin dkk.\ (2018), \OG\ Ogata (2015), \PH\ Phillips dkk.\ (2014). Nomor bab mengacu pada edisi yang tercantum dan perlu diperiksa bila memakai edisi lain. Satu minggu terdiri atas $3 \times 50$ menit tatap muka dan kegiatan terstruktur serta mandiri sesuai bobot 3 SKS.\\
+\en{Reference keys: [FR] Franklin et al.\ (2018), [OG] Ogata (2015), [PH] Phillips et al.\ (2014). Chapter numbers refer to the listed editions and should be checked for other editions. Each week comprises $3 \times 50$ minutes of class contact plus structured and independent study according to 3 credits.}
+
+% TODO: verifikasi nomor bab terhadap edisi buku yang tersedia di perpustakaan.
+
+\begin{landscape}
+	\footnotesize
+	\setlength{\LTleft}{0pt}
+	\setlength{\LTright}{0pt}
+	\rowcolors{2}{skdlight}{white}
+	\begin{longtable}{@{}C{0.8cm} C{1.2cm} L{9.6cm} L{3.8cm} L{3.0cm} L{3.2cm}@{}}
+		\toprule
+		\rowcolor{skdblue}
+		\color{white}\textbf{Mg} & \color{white}\textbf{Sub-CPMK} & \color{white}\textbf{Bahan kajian} \en{\color{white!80!black}/ Topics} & \color{white}\textbf{Metode \& aktivitas} & \color{white}\textbf{Rujukan} & \color{white}\textbf{Asesmen \& praktikum} \\
+		\midrule
+		\endhead
+		\bottomrule
+		\endfoot
+		1 & S1 &
+		\textbf{Pendahuluan dan tinjauan kontrol kontinu} \newline \en{Introduction and review of continuous control} \newline
+		Kontrak kuliah; elemen sistem kontrol digital; pemodelan dan fungsi transfer; model orde 1, orde 2, dan FOPDT; spesifikasi kinerja; PID kontinu dan penalaan Ziegler--Nichols/Cohen--Coon. &
+		Kuliah, diskusi contoh aplikasi; tugas baca &
+		\FR\ 1, 3, 4.3; \OG\ 1.1--1.3; \PH\ 1 &
+		Kuis awal (diagnostik) \\
+		%
+		2 & S2 &
+		\textbf{Sistem kontrol digital: pencacahan dan rekonstruksi} \newline \en{Digital control systems: sampling and reconstruction} \newline
+		Sinyal kontinu, diskrit, digital; ADC/DAC dan kuantisasi; pencacahan periodik; teorema Shannon dan \textit{aliasing}; \textit{zero-order hold} dan \textit{first-order hold}; pemilihan waktu cacah. &
+		Kuliah, demo \textit{aliasing} di MATLAB/Python &
+		\FR\ 8.1, 8.4, 8.5; \OG\ 1.4--1.5, 3.2; \PH\ 3 &
+		PR-1 \\
+		%
+		3 & S3 &
+		\textbf{Persamaan beda dan transformasi Z} \newline \en{Difference equations and the Z-transform} \newline
+		Persamaan beda; definisi dan sifat transformasi Z; teorema nilai awal dan akhir; transformasi Z invers (pembagian panjang, pecahan parsial, residu); penyelesaian persamaan beda. &
+		Kuliah, latihan soal terbimbing &
+		\FR\ 8.2; \OG\ 2; \PH\ 2 &
+		\textbf{Praktikum Modul 0}: pengenalan kit \\
+		%
+		4 & S4 &
+		\textbf{Fungsi transfer pulsa dan identifikasi model} \newline \en{Pulse transfer function and model identification} \newline
+		Pencacahan impuls dan transformasi bintang; fungsi transfer pulsa; ekuivalen ZOH $G(z) = (1-z^{-1})\,\mathcal{Z}\{G(s)/s\}$; diagram blok sistem tercacah; identifikasi FOPDT dari respons tangga dan model ARX dengan kuadrat terkecil. &
+		Kuliah, studi kasus motor DC kit praktikum &
+		\FR\ 8.2--8.3; \OG\ 3.3--3.5; \PH\ 4--5, 11 &
+		PR-2 \\
+		%
+		5 & S5 &
+		\textbf{Emulasi dan PID diskrit (metode heuristik)} \newline \en{Emulation and discrete PID (heuristic design)} \newline
+		Diskritisasi pengontrol: Euler maju/mundur, Tustin dengan \textit{prewarping}, \textit{matched pole-zero}; PID diskrit bentuk posisi dan kecepatan; \textit{anti-windup}, filter derivatif; penalaan heuristik dengan koreksi tunda $T/2$; implementasi pada mikrokontroler. &
+		Kuliah, \textit{live coding} PID di Arduino &
+		\FR\ 4.3, 8.3; \OG\ 4.5; \PH\ 6, 8 &
+		\textbf{Praktikum Modul 1}: identifikasi sistem \\
+		%
+		6 & S6 &
+		\textbf{Analisis respons di bidang $z$} \newline \en{Response analysis in the $z$-plane} \newline
+		Pemetaan $z = e^{sT}$; kontur $\zeta$, $\omega_n$ konstan; respons transien dan lokasi kutub; galat keadaan tunak dan tipe sistem; indeks kinerja IAE/ISE/ITAE. &
+		Kuliah, simulasi respons di MATLAB/Python &
+		\FR\ 8.2, 8.6; \OG\ 4.2--4.4; \PH\ 6 &
+		PR-3 \\
+		%
+		7 & S7 &
+		\textbf{Analisis kestabilan sistem diskrit} \newline \en{Stability analysis of discrete-time systems} \newline
+		Kestabilan BIBO dan asimtotik; uji Jury; transformasi bilinear dan kriteria Routh--Hurwitz; pengaruh waktu cacah dan waktu tunda komputasi terhadap kestabilan. &
+		Kuliah, latihan soal; review UTS &
+		\OG\ 4.3; \PH\ 7 &
+		\textbf{Praktikum Modul 2}: kontrol kecepatan \\
+		%
+		8 & S1--S7 &
+		\textbf{Ujian Tengah Semester} \newline \en{Midterm examination} &
+		Ujian tertulis &
+		-- &
+		UTS \\
+		%
+		9 & S8 &
+		\textbf{Perancangan dengan \textit{root locus} di bidang $z$} \newline \en{Root-locus design in the $z$-plane} \newline
+		Aturan \textit{root locus} diskrit; perancangan kompensator \textit{lead}, \textit{lag}, dan PID secara analitik di bidang $z$; perbandingan perancangan emulasi dan perancangan langsung. &
+		Kuliah, perancangan dengan \texttt{rlocus}/\texttt{sisotool} &
+		\FR\ 8.6; \OG\ 4.4; \PH\ 7.5, 8 &
+		PR-4 \\
+		%
+		10 & S9 &
+		\textbf{Respons frekuensi dan perancangan langsung} \newline \en{Frequency response and direct design} \newline
+		Transformasi $w$; diagram Bode sistem diskrit; margin penguatan dan fasa; perancangan di bidang $w$; perancangan \textit{deadbeat} dan pengontrol Dahlin. &
+		Kuliah, latihan perancangan &
+		\FR\ 8.6; \OG\ 4.5--4.6; \PH\ 7.6--7.8, 8 &
+		\textbf{Praktikum Modul 3}: kontrol posisi \\
+		%
+		11 & S10 &
+		\textbf{Ruang keadaan diskrit} \newline \en{Discrete-time state space} \newline
+		Representasi ruang keadaan diskrit; diskritisasi model kontinu ($\Phi = e^{AT}$, $\Gamma$); penyelesaian persamaan keadaan; fungsi transfer pulsa dari ruang keadaan; keterkendalian dan keteramatan. &
+		Kuliah, simulasi \texttt{c2d} &
+		\FR\ 7.2, 8.7; \OG\ 5; \PH\ 2.10, 9 &
+		PR-5; pengumuman Tugas Besar \\
+		%
+		12 & S11 &
+		\textbf{Penempatan kutub} \newline \en{Pole placement} \newline
+		Umpan balik keadaan; formula Ackermann; pemilihan lokasi kutub dari spesifikasi; aksi integral dan pelacakan \textit{setpoint}; kontrol \textit{deadbeat} berbasis ruang keadaan. &
+		Kuliah, studi kasus motor DC &
+		\FR\ 7.5; \OG\ 6.1--6.5; \PH\ 9.2--9.4 &
+		Kuis-1 \\
+		%
+		13 & S12 &
+		\textbf{Pengamat keadaan} \newline \en{State observers} \newline
+		Pengamat prediktor dan pengamat \textit{current}; pengamat orde penuh dan orde tereduksi; prinsip pemisahan; sistem kontrol dengan pengamat. &
+		Kuliah, simulasi pengamat &
+		\FR\ 7.7--7.8; \OG\ 6.6--6.8; \PH\ 9.5--9.7 &
+		\textbf{Praktikum Modul 4}: \textit{pole placement} \\
+		%
+		14 & S13 &
+		\textbf{Kontrol optimal kuadratik dan estimasi optimal} \newline \en{Quadratic optimal control and optimal estimation} \newline
+		Indeks kinerja kuadratik; persamaan Riccati diskrit; LQR keadaan tunak; pemilihan bobot $Q$ dan $R$; filter Kalman diskrit; pengantar LQG dan MPC. &
+		Kuliah, simulasi \texttt{dlqr}/\texttt{kalman} &
+		\FR\ 7.9; \OG\ 8; \PH\ 10 &
+		PR-6 \\
+		%
+		15 & S14 &
+		\textbf{Isu implementasi dan presentasi tugas besar} \newline \en{Implementation issues and project presentations} \newline
+		Kuantisasi koefisien dan aritmetika titik tetap; tunda komputasi dan \textit{jitter}; saturasi aktuator; struktur program waktu nyata; presentasi tugas besar. &
+		Kuliah singkat, presentasi kelompok dan tanya jawab &
+		\FR\ 8.4--8.5; \PH\ 12--13 &
+		Presentasi Tugas Besar \\
+		%
+		16 & S1--S14 &
+		\textbf{Ujian Akhir Semester} \newline \en{Final examination} &
+		Ujian tertulis &
+		-- &
+		UAS; batas akhir laporan Tugas Besar \\
+	\end{longtable}
+\end{landscape}
+
+% ===========================================================================
+\bsection{Praktikum dan Tugas Besar}{Laboratory and Course Project}
+% ===========================================================================
+\bsubsection{Praktikum}{Laboratory}
+Praktikum dilaksanakan berkelompok menggunakan kit praktikum SKD yang sama sepanjang semester. Setiap modul dijadwalkan setelah teori pendukungnya dibahas di kelas.\\
+\en{Laboratory work is carried out in groups using the same SKD kit throughout the semester. Each module is scheduled after its supporting theory has been covered in class.}
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{@{}c l Y c c@{}}
+		\toprule
+		\textbf{Modul} & \textbf{Judul} & \textbf{Kaitan dengan kuliah} & \textbf{Minggu} & \textbf{CPMK} \\
+		\midrule
+		0 & Pengenalan Kit Praktikum & Pencacahan, ADC/DAC, waktu cacah (Mg 2) & 3 & 1, 5 \\
+		1 & Identifikasi Sistem & Fungsi transfer pulsa, identifikasi FOPDT/ARX (Mg 4) & 5 & 1, 4, 5 \\
+		2 & Kontrol Kecepatan & PID diskrit dan penalaan heuristik (Mg 5) & 7 & 3, 4, 5 \\
+		3 & Kontrol Posisi & Analisis kestabilan dan \textit{root locus} (Mg 7, 9) & 10 & 2, 3, 5 \\
+		4 & \textit{Pole Placement} & Ruang keadaan dan penempatan kutub (Mg 11--12) & 13 & 3, 4, 5 \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+% TODO: sesuaikan minggu praktikum dengan jadwal laboratorium.
+
+\bsubsection{Tugas Besar}{Course Project}
+Setiap kelompok merancang, menyimulasikan, mengimplementasikan, dan menguji satu metode kontrol diskrit selain PID konvensional untuk mengontrol kecepatan atau posisi motor pada kit praktikum. Pilihan metode: LQR, LQG, MPC, \textit{sliding mode control}, atau penempatan kutub dengan pengamat dan kriteria optimal.\\
+\en{Each group designs, simulates, implements, and tests one discrete control method other than conventional PID to control motor speed or position on the lab kit. Options: LQR, LQG, MPC, sliding mode control, or pole placement with an observer and optimality criteria.}
+
+\medskip
+\noindent Luaran / \en{Deliverables}: program, \textit{spreadsheet} data identifikasi dan hasil, laporan (latar belakang, dasar teori, identifikasi sistem, hasil dan analisis, kesimpulan), dan presentasi 10 menit + 5 menit tanya jawab pada Minggu 15.
+
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{@{}l Y c@{}}
+		\toprule
+		\textbf{Kriteria} & \textbf{Ketentuan minimum (nilai 70)} & \textbf{Bobot} \\
+		\midrule
+		Kelengkapan dokumen & Dokumen lengkap, tepat waktu, rapi, dan terstruktur & 30\% \\
+		Pemahaman sistem dan metode & Teori dasar lengkap, diagram blok jelas, identifikasi sistem jelas & 30\% \\
+		Hasil pengontrolan & Sistem terkontrol, kinerja teridentifikasi, grafik jelas dan lengkap & 10\% \\
+		Presentasi & Tepat waktu, menarik, terstruktur, dan jelas & 30\% \\
+		Bonus & Kreativitas, uji gangguan/derau, demonstrasi langsung & +15\% \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+% ===========================================================================
+\bsection{Penilaian}{Assessment}
+% ===========================================================================
+% TODO: sesuaikan bobot penilaian dengan kesepakatan tim dosen.
+\begin{table}[H]
+	\centering
+	\begin{tabularx}{\textwidth}{@{}L{4.6cm} c c c c c Y@{}}
+		\toprule
+		\textbf{Komponen} \en{/ Component} & \textbf{C1} & \textbf{C2} & \textbf{C3} & \textbf{C4} & \textbf{C5} & \textbf{Bobot} \\
+		\midrule
+		PR dan kuis \en{/ Homework \& quizzes} & \checkmark & \checkmark & \checkmark & \checkmark &            & 15\% \\
+		Praktikum \en{/ Laboratory}             & \checkmark &            & \checkmark & \checkmark & \checkmark & 20\% \\
+		Tugas besar \en{/ Course project}       &            & \checkmark & \checkmark & \checkmark & \checkmark & 15\% \\
+		UTS \en{/ Midterm}                      & \checkmark & \checkmark & \checkmark &            &            & 25\% \\
+		UAS \en{/ Final}                        &            & \checkmark & \checkmark &            &            & 25\% \\
+		\midrule
+		\textbf{Total}                          &            &            &            &            &            & \textbf{100\%} \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+C1--C5 menyatakan CPMK-1 hingga CPMK-5. \en{C1--C5 denote CPMK-1 to CPMK-5.}
+
+\bsubsection{Konversi Nilai}{Grading Scale}
+% TODO: sesuaikan dengan peraturan akademik ITB yang berlaku.
+\begin{table}[H]
+	\centering
+	\begin{tabular}{@{}ccccccc@{}}
+		\toprule
+		A & AB & B & BC & C & D & E \\
+		\midrule
+		$\geq 80$ & 73--79 & 65--72 & 57--64 & 50--56 & 40--49 & $< 40$ \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+% ===========================================================================
+\bsection{Ketentuan Perkuliahan}{Course Policies}
+% ===========================================================================
+\begin{enumerate}
+	\item \bil{Kehadiran kuliah minimal 80\% dan kehadiran praktikum 100\% sebagai syarat mengikuti UAS.}{Minimum 80\% lecture attendance and 100\% lab attendance are required to sit the final exam.}
+	\item \bil{PR dikumpulkan melalui Edunex sesuai tenggat; keterlambatan dikenai pengurangan nilai.}{Homework is submitted via Edunex by the deadline; late submissions incur a penalty.}
+	\item \bil{Kerja sama dalam memahami materi dianjurkan, tetapi setiap jawaban PR ditulis sendiri. Plagiarisme, termasuk penyalinan kode tanpa atribusi, dikenai sanksi sesuai peraturan ITB.}{Collaboration in understanding the material is encouraged, but each homework answer must be written individually. Plagiarism, including copying code without attribution, is sanctioned according to ITB regulations.}
+	\item \bil{Penggunaan perangkat AI diperbolehkan untuk belajar dan pemrograman dengan menyebutkan penggunaannya; tidak diperbolehkan saat kuis dan ujian.}{AI tools may be used for learning and programming if their use is disclosed; they are not allowed during quizzes and exams.} % TODO: sesuaikan kebijakan AI
+	\item \bil{Kit praktikum dipakai sesuai SOP pada Modul 0; kerusakan akibat kelalaian menjadi tanggung jawab kelompok.}{Lab kits must be operated according to the SOP in Module 0; damage due to negligence is the group's responsibility.}
+\end{enumerate}
+
+\end{document}
