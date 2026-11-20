@@ -1,0 +1,99 @@
+\chapter{Isu Implementasi Pengontrol Digital}
+\label{bab:impl}
+\enchap{Implementation Issues of Digital Controllers}
+
+\begin{tujuan}
+	Setelah mempelajari bab ini, Anda mampu menganalisis pengaruh tunda komputasi dan \textit{jitter}, menjelaskan efek kuantisasi koefisien dan aritmetika titik tetap, menyusun struktur program waktu nyata yang aman, dan menerapkan alur uji dari simulasi ke perangkat keras.
+\end{tujuan}
+
+\section{Pewaktuan}
+\subsection{Tunda komputasi}
+Dalam model diskrit standar, $u[k]$ dianggap berlaku tepat pada saat $y[k]$ dicacah. Pada kenyataannya aksi kontrol baru dikirim setelah waktu komputasi $T_c$. Ada tiga strategi: (1) kirim segera setelah dihitung sehingga $T_c \ll T$ dan dapat diabaikan atau diperlakukan sebagai tunda kecil; (2) kirim pada cacah berikutnya sehingga tunda tepat $z^{-1}$ dan dimasukkan ke model saat merancang; (3) pisahkan komputasi, yaitu hitung bagian yang hanya bergantung pada data lama sebelum cacah dan sisakan sedikit operasi setelah membaca $y$.
+
+\begin{contoh}[Tunda satu cacah yang tidak dimodelkan]
+	Kompensator \textit{lead} Bab~\ref{bab:rlocus} pada plant posisi memberi $M_p = 16\%$ dan $t_s = 2{,}1$\,s. Bila aksi kontrolnya ternyata dikirim satu cacah kemudian, lewatan naik menjadi $38\%$, waktu turun menjadi 3,8\,s, dan jari-jari kutub terbesar naik dari 0,82 menjadi 0,90. Tunda satu cacah menambah fasa $-\omega T$, dua kali tunda ZOH. Bila $u$ dikirim di cacah berikutnya, rancang ulang dengan $z^{-1}G(z)$.
+\end{contoh}
+
+\subsection{\textit{Jitter}}
+\term{\textit{Jitter}}{jitter} adalah variasi waktu antar-cacah atau antar-keluaran, padahal model diskrit mengasumsikan $T$ konstan. Pada Arduino, sumbernya antara lain \texttt{Serial.print} yang panjang di dalam kalang, komunikasi I$^2$C dan \texttt{analogRead} berulang, cabang program dengan durasi berbeda, serta pemakaian \texttt{delay()} alih-alih pewaktuan \texttt{millis()}. Praktik yang baik adalah mengukur \texttt{DeltaTime} dan waktu eksekusi dengan \texttt{micros()} (Modul 0), menjaga waktu eksekusi terburuk di bawah $0{,}5T$, mencetak data lebih jarang atau dalam format biner ringkas, dan memakai \textit{timer interrupt} untuk $T$ kecil yang menuntut presisi.
+
+\section{Numerik}
+\subsection{Kuantisasi koefisien}
+Koefisien kontroler disimpan dengan presisi terbatas. Bila kutub berada dekat $z = 1$ (karena $T$ kecil dibanding dinamika sistem), koefisien polinomial hampir saling meniadakan sehingga galat kecil menggeser akar jauh.
+
+\begin{contoh}[Sensitivitas kutub]
+	Filter orde dua dengan kutub $0{,}98e^{\pm j0{,}05}$ memiliki penyebut $z^2 - 1{,}957551z + 0{,}960400$. Bila koefisien dibulatkan ke 8 bit pecahan, kutub menjadi $0{,}98027e^{\pm j0{,}0599}$, yaitu frekuensi osilasi bergeser 20\%. Dengan 12 bit sudutnya 0,0508 rad, dan dengan 16 bit kembali 0,0500 rad.
+\end{contoh}
+
+Mitigasinya: realisasikan kontroler sebagai kaskade atau paralel seksi orde satu dan dua, bukan bentuk langsung orde tinggi; gunakan bentuk ruang keadaan atau operator delta $\delta = (z-1)/T$; dan jangan memilih $T$ jauh lebih kecil dari yang diperlukan.
+
+\subsection{Titik tetap dan titik mengambang}
+ATmega328P pada Arduino UNO tidak memiliki unit \textit{floating-point}; tipe \texttt{float} diemulasi perangkat lunak dan jauh lebih lambat daripada operasi bilangan bulat, sehingga waktu eksekusinya perlu diukur dengan \texttt{micros()}. Pada AVR, \texttt{double} sama dengan \texttt{float} 32-bit (sekitar 7 digit desimal). Aritmetika titik tetap (format Q) memakai bilangan bulat dengan skala $2^{-b}$; cepat, tetapi rentangnya terbatas sehingga \textit{overflow} harus diwaspadai dan aritmetika jenuh digunakan.
+
+\begin{contoh}[Koefisien $a = e^{-T/\tau}$ dalam Q8]
+	Dengan $\tau = 0{,}5$\,s dan 8 bit pecahan: untuk $T = 0{,}1$\,s, $a = 0{,}818731$ menjadi $0{,}820313$ dengan $\tau$ efektif $0{,}505$\,s; untuk $T = 0{,}01$\,s, $\tau$ efektif $0{,}507$\,s; untuk $T = 0{,}001$\,s, $a = 0{,}998002$ menjadi $0{,}996094$ dengan $\tau$ efektif hanya $0{,}255$\,s. Waktu cacah yang sangat kecil membuat model kehilangan separuh konstanta waktunya.
+\end{contoh}
+
+\section{Praktik implementasi}
+\subsection{Struktur program}
+Struktur program waktu nyata sebaiknya mengikuti urutan: ukur, hitung, batasi, kirim, lalu pekerjaan lain seperti memperbarui pengamat, \textit{anti-windup}, dan pencatatan data (Kode~\ref{lst:b14-loop}). Penulisan \texttt{last += T\_US} menjaga rata-rata periode tepat $T$ tanpa \textit{drift}. Aspek keselamatan meliputi batas $u$, deteksi sensor di luar rentang, dan perintah berhenti darurat. Semua keadaan (integrator, pengamat) diinisialisasi di \texttt{setup()} dan saat berganti mode.
+
+\begin{lstlisting}[language=C++,caption={Kerangka kalang kontrol waktu nyata},label={lst:b14-loop}]
+void loop() {
+  baca_perintah_serial();          // non-blocking
+  unsigned long now = micros();
+  if (now - last >= T_US) {
+    last += T_US;                  // tanpa drift
+    float y = baca_sensor();       // 1. ukur
+    float u = kontroler(r, y);     // 2. hitung
+    u = batasi(u);                 // 3. saturasi
+    run_motor(kompensasi(u));      // 4. kirim
+    update_keadaan(u);             // 5. pengamat, anti-windup
+    if (++n % 5 == 0) log_data();  // 6. catat jarang
+  }
+}
+\end{lstlisting}
+
+\subsection{Nonlinieritas}
+Rancangan linier mengasumsikan beberapa nonlinieritas sudah ditangani: saturasi aktuator (batasi $u$ dan $\Delta u$, terapkan \textit{anti-windup} pada integrator dan pengamat dengan memakai $u$ setelah saturasi); \textit{deadzone} dan gesekan (kompensasi invers \textit{deadzone} seperti pada Modul 1); serta sensor (filter \textit{anti-alias}, kalibrasi, satuan yang konsisten, dan perilaku potensiometer yang melompat antara 100\% dan 0\%). Sebagian besar kegagalan implementasi berasal dari hal-hal ini, bukan dari teori kontrolnya.
+
+\subsection{Alur uji}
+Alur uji yang dianjurkan terdiri atas lima tahap: (1) simulasi model di MATLAB atau Python; (2) simulasi kode kontroler yang sama persis dengan yang akan diunggah; (3) uji pada kit tanpa daya motor sambil mengamati \textit{Serial Monitor} (SOP Modul 0: lepas transistor atau jangan sambungkan 220\,V); (4) uji pada kit dengan penguatan dan \textit{setpoint} kecil; (5) uji penuh termasuk gangguan, dengan pencatatan data. Tahap 2 menangkap kesalahan satuan, tanda, dan urutan operasi sebelum motor bergerak. Data kit dan simulasi sebaiknya dibandingkan pada grafik yang sama; bila berbeda jauh, periksa model (identifikasi ulang), tunda, saturasi, dan \textit{deadzone}.
+
+\section{Peta metode}
+Tabel~\ref{tab:b14-peta} merangkum metode yang dipelajari dalam kuliah ini. Semuanya bermuara pada persamaan beda yang dijalankan setiap $T$ detik di mikroprosesor.
+
+\begin{table}[H]
+	\centering
+	\caption{Peta metode perancangan kontrol diskrit}
+	\label{tab:b14-peta}
+	\small
+	\renewcommand{\arraystretch}{1.3}
+	\begin{tabularx}{\textwidth}{@{}l l X l@{}}
+		\toprule
+		Pendekatan & Model & Metode & Bab \\
+		\midrule
+		Heuristik & FOPDT dari data & PID dengan ZN/Cohen--Coon ($\theta + T/2$) & \ref{bab:emulasi} \\
+		Emulasi & $G(s)$ & Tustin/MPZ dari $C(s)$ & \ref{bab:emulasi} \\
+		Langsung $z$ & $G(z)$ (ZOH) & \textit{root locus}, bidang $w$ & \ref{bab:rlocus}, \ref{bab:frek} \\
+		Langsung $z$ & $G(z)$ & Ragazzini, \textit{deadbeat}, Dahlin & \ref{bab:frek} \\
+		Ruang keadaan & $\Phi, \Gamma, C$ & penempatan kutub dan pengamat & \ref{bab:pp}, \ref{bab:obs} \\
+		Optimal & $\Phi, \Gamma$ dan derau & LQR, Kalman, LQG, MPC & \ref{bab:lqr} \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+\begin{ringkasan}
+	Tunda komputasi diatasi dengan mengirim aksi segera atau memodelkannya sebagai $z^{-1}$. Periode cacah dijaga tetap dan \textit{jitter} diukur. Koefisien kutub dekat $z = 1$ peka terhadap kuantisasi sehingga dipakai realisasi orde rendah. Implementasi diuji bertahap dengan menangani saturasi, \textit{deadzone}, dan sensor.\\[3pt]
+	\en{Handle computational delay by early output or by modelling it as $z^{-1}$; keep the sampling period constant and measure jitter; use low-order realisations to limit coefficient sensitivity; test incrementally and handle saturation, deadzone, and sensor issues.}
+\end{ringkasan}
+
+\paragraph{Istilah kunci.} tunda komputasi \en{(computational delay)}, \textit{jitter}, kuantisasi koefisien \en{(coefficient quantisation)}, titik tetap \en{(fixed point)}, \textit{timer interrupt}, aritmetika jenuh \en{(saturating arithmetic)}.
+
+\section*{Latihan}
+\begin{enumerate}
+	\item Ukur waktu eksekusi fungsi PID (Kode~\ref{lst:b5-pid}) di Arduino UNO dengan \texttt{float} dan dengan bilangan bulat Q15.
+	\item Rancang ulang kompensator \textit{lead} Bab~\ref{bab:rlocus} dengan memperhitungkan tunda $z^{-1}$.
+	\item Tunjukkan bahwa realisasi kaskade dua seksi orde satu kurang peka terhadap kuantisasi daripada bentuk langsung orde dua untuk kutub $0{,}98$ dan $0{,}97$.
+	\item Susun daftar periksa (\textit{checklist}) keselamatan sebelum menjalankan kontroler baru pada kit.
+\end{enumerate}

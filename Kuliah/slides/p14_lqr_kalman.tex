@@ -1,0 +1,348 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{skd}
+
+\title[Pertemuan 14 -- LQR dan Filter Kalman]{Kontrol Optimal Kuadratik dan Estimasi Optimal}
+\subtitle{Quadratic Optimal Control (LQR) and Optimal Estimation (Kalman Filter)}
+\author{Ir. Estiyanti Ekawati, M.T., Ph.D. \quad\textbar\quad Faqihza Mukhlish, S.T., M.T., Ph.D.}
+\institute{Program Studi Teknik Fisika, Fakultas Teknologi Industri, Institut Teknologi Bandung}
+\date{Pertemuan 14 \textbar\ Semester I 2026/2027}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+	\titlepage
+\end{frame}
+
+\begin{frame}{Tujuan pertemuan}
+	\framesubtitle{Learning objectives}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{enumerate}
+				\item Merumuskan indeks kinerja kuadratik dan memilih bobot $Q$, $R$.
+				\item Menghitung penguatan LQR dari persamaan Riccati diskrit.
+				\item Menjelaskan kompromi kinerja--usaha kontrol.
+				\item Menurunkan dan menerapkan filter Kalman diskrit.
+				\item Menggabungkan LQR dan filter Kalman (LQG) serta mengenal MPC.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\begin{block}{Sub-CPMK S13}
+				\small Merancang pengontrol kuadratik optimal (LQR) dan memahami estimasi optimal (filter Kalman, LQG).\\[3pt]
+				\en{Design quadratic optimal controllers (LQR) and understand optimal estimation (Kalman filter, LQG).}
+			\end{block}
+			{\small Bacaan: [OG] Bab 8; [PH] Bab 10; [FR] 7.9}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Regulator Kuadratik Linier (LQR)\texorpdfstring{\\[4pt]{\Large\en{Linear Quadratic Regulator}}}{ / Linear Quadratic Regulator}}
+% ===========================================================================
+
+\begin{frame}{Dari menempatkan kutub ke meminimalkan biaya}
+	\framesubtitle{From placing poles to minimising cost}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Penempatan kutub: \textit{di mana} kutubnya? Sulit dijawab untuk sistem orde tinggi atau banyak masukan.\\[4pt]
+			LQR: cari $u[k]$ yang meminimalkan
+			\begin{block}{}
+				\[
+					J = \sum_{k=0}^{\infty}\Big(\mathbf{x}[k]^\top Q\,\mathbf{x}[k] + u[k]^\top R\,u[k]\Big)
+				\]
+			\end{block}
+			$Q \succeq 0$: hukuman penyimpangan keadaan; $R \succ 0$: hukuman usaha kontrol.
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{block}{Solusi (horison tak hingga)}
+				\small
+				Umpan balik keadaan konstan $u = -K\mathbf{x}$ dengan
+				\[
+					K = (R + \Gamma^\top P\Gamma)^{-1}\Gamma^\top P\Phi
+				\]
+				$P$ solusi \term{persamaan Riccati aljabar diskrit}{DARE}:
+				\begin{align*}
+					P = Q &+ \Phi^\top P\Phi\\
+					&- \Phi^\top P\Gamma(R + \Gamma^\top P\Gamma)^{-1}\Gamma^\top P\Phi
+				\end{align*}
+			\end{block}
+			{\scriptsize MATLAB: \texttt{dlqr(Phi,Gam,Q,R)}. Python: \texttt{control.dlqr}.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Horison berhingga dan rekursi Riccati}
+	\framesubtitle{Finite horizon and the Riccati recursion}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Untuk $J_N = \mathbf{x}[N]^\top S\,\mathbf{x}[N] + \sum_{k=0}^{N-1}(\mathbf{x}^\top Q\mathbf{x} + u^\top Ru)$, pemrograman dinamis memberi rekursi \textbf{mundur} dari $P_N = S$:
+			\begin{align*}
+				K_k &= (R + \Gamma^\top P_{k+1}\Gamma)^{-1}\Gamma^\top P_{k+1}\Phi\\
+				P_k &= Q + \Phi^\top P_{k+1}(\Phi - \Gamma K_k)
+			\end{align*}
+			Bila $N \to \infty$, $P_k$ konvergen ke solusi DARE dan $K_k$ ke $K$ konstan.
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{block}{Sifat LQR}
+				\small
+				\begin{itemize}
+					\item Kalang tertutup dijamin stabil bila $(\Phi,\Gamma)$ terkendali dan $(\Phi, Q^{1/2})$ teramati.
+					\item Hanya bobot yang dipilih; kutub mengikuti secara otomatis.
+					\item Mudah untuk banyak masukan.
+					\item Margin LQR kontinu yang terkenal (PM $\ge 60^\circ$) \alert{tidak dijamin} pada versi diskrit; periksa margin.
+				\end{itemize}
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Memilih $Q$ dan $R$: aturan Bryson}
+	\framesubtitle{Choosing $Q$ and $R$: Bryson's rule}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Normalisasi dengan nilai maksimum yang dapat diterima:
+			\[
+				Q_{ii} = \frac{1}{x_{i,\max}^2},\qquad R_{jj} = \frac{1}{u_{j,\max}^2}
+			\]
+			lalu tala dengan satu faktor $\rho$: $J = \sum \mathbf{x}^\top Q\mathbf{x} + \rho\,u^\top Ru$.\\[4pt]
+			\textbf{Contoh motor posisi}: $\theta_{\max} = 0{,}1$ rad, $u_{\max} = 1$:\\
+			$Q = \text{diag}(100, 0)$, $R = 1$, setara $Q = \text{diag}(1,0)$, $R = 0{,}01$.
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{alertblock}{Intuisi}
+				\small
+				\begin{itemize}
+					\item $R$ kecil (kontrol ``murah''): respons cepat, $u$ besar.
+					\item $R$ besar (kontrol ``mahal''): respons lambat, $u$ kecil.
+					\item Hanya rasio $Q/R$ yang penting.
+				\end{itemize}
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Contoh LQR motor posisi}
+	\framesubtitle{LQR example: motor position}
+	\begin{columns}[c]
+		\begin{column}{0.58\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{groupplot}[group style={group size=1 by 2,vertical sep=0.35cm,xticklabels at=edge bottom},skd,width=8.8cm,height=3.4cm,xmin=0,xmax=4]
+					\nextgroupplot[ylabel={$\theta$},ymin=0,ymax=1.15,legend style={at={(0.98,0.05)},anchor=south east},legend columns=3]
+					\addplot[skdgray,dashed,thin,domain=0:4,forget plot] {1};
+					\addplot[skdred,const plot] table[x=t,y=y1] {data/p14_lqr.dat};
+					\addplot[skdorange,const plot] table[x=t,y=y2] {data/p14_lqr.dat};
+					\addplot[skdblue,const plot] table[x=t,y=y3] {data/p14_lqr.dat};
+					\legend{$R=0{,}01$, $R=0{,}1$, $R=1$}
+					\nextgroupplot[ylabel={$u$},ymin=-1,ymax=8.5,xlabel={$t$ (s)}]
+					\addplot[skdred,const plot] table[x=t,y=u1] {data/p14_lqr.dat};
+					\addplot[skdorange,const plot] table[x=t,y=u2] {data/p14_lqr.dat};
+					\addplot[skdblue,const plot] table[x=t,y=u3] {data/p14_lqr.dat};
+				\end{groupplot}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.38\textwidth}
+			\scriptsize
+			$Q = \text{diag}(1, 0)$, $T=0{,}1$\,s, referensi melalui $\bar N$.\\[3pt]
+			\renewcommand{\arraystretch}{1.25}
+			\begin{tabular}{@{}l c c c@{}}
+				\toprule
+				$R$ & 0,01 & 0,1 & 1 \\
+				\midrule
+				$k_1$ & 7,94 & 2,85 & 0,96 \\
+				$k_2$ & 2,05 & 0,98 & 0,41 \\
+				$|z_{cl}|$ & 0,72 & 0,82 & 0,87 \\
+				$M_p$ & 3,1\% & 1,3\% & 0\% \\
+				$t_s$ (s) & 1,4 & 1,6 & 4,0 \\
+				$u_{\max}$ & 7,9 & 2,9 & 1,0 \\
+				\bottomrule
+			\end{tabular}\\[4pt]
+			\small Satu parameter $R$ menggeser kompromi kecepatan--usaha secara mulus, dengan redaman yang selalu baik.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Filter Kalman\texorpdfstring{\\[4pt]{\Large\en{The Kalman Filter}}}{ / The Kalman Filter}}
+% ===========================================================================
+
+\begin{frame}{Model dengan derau}
+	\framesubtitle{Model with noise}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			\begin{align*}
+				\mathbf{x}[k+1] &= \Phi\mathbf{x}[k] + \Gamma u[k] + \Gamma_w w[k]\\
+				y[k] &= C\mathbf{x}[k] + v[k]
+			\end{align*}
+			\begin{itemize}
+				\item $w$: derau proses (gangguan, galat model), kovarians $Q_n$.
+				\item $v$: derau pengukuran, kovarians $R_n$.
+				\item Keduanya putih, rerata nol, saling bebas.
+			\end{itemize}
+			Tujuan: estimasi $\hat{\mathbf{x}}$ yang meminimalkan $E\big[\|\mathbf{x} - \hat{\mathbf{x}}\|^2\big]$.
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{block}{Hubungan dengan pengamat}
+				\small
+				Filter Kalman \textbf{adalah} pengamat \textit{current} (Pertemuan 13) dengan penguatan $L$ yang dipilih secara optimal dari $Q_n$ dan $R_n$, bukan dari lokasi kutub.
+			\end{block}
+			\small
+			\begin{itemize}
+				\item $R_n$ besar (sensor buruk): percaya model, $L$ kecil.
+				\item $Q_n$ besar (model buruk): percaya sensor, $L$ besar.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Algoritma filter Kalman diskrit}
+	\framesubtitle{Discrete Kalman filter algorithm}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\begin{block}{Koreksi \en{(measurement update)}}
+				\small
+				\begin{align*}
+					L_k &= P_k^-C^\top\big(CP_k^-C^\top + R_n\big)^{-1}\\
+					\hat{\mathbf{x}}_k &= \hat{\mathbf{x}}_k^- + L_k\big(y[k] - C\hat{\mathbf{x}}_k^-\big)\\
+					P_k &= (I - L_kC)\,P_k^-
+				\end{align*}
+			\end{block}
+			\begin{block}{Prediksi \en{(time update)}}
+				\small
+				\begin{align*}
+					\hat{\mathbf{x}}_{k+1}^- &= \Phi\hat{\mathbf{x}}_k + \Gamma u[k]\\
+					P_{k+1}^- &= \Phi P_k\Phi^\top + \Gamma_wQ_n\Gamma_w^\top
+				\end{align*}
+			\end{block}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\small
+			\begin{itemize}
+				\item $P$: kovarians galat estimasi; ``seberapa yakin'' filter.
+				\item Untuk sistem LTI, $P_k^-$ dan $L_k$ konvergen ke nilai tunak (DARE dual), sehingga cukup simpan $L$ konstan di mikrokontroler.
+			\end{itemize}
+			\begin{exampleblock}{Motor posisi}
+				\small
+				Derau masukan $Q_n = 0{,}5$, derau potensiometer $\sigma_v = 0{,}01$ rad:
+				\[
+					L_\infty = \begin{bmatrix}0{,}765\\ 5{,}326\end{bmatrix}
+				\]
+				Kutub galat: $|z| = 0{,}44$.
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Simulasi filter Kalman}
+	\framesubtitle{Kalman filter simulation}
+	\begin{columns}[c]
+		\begin{column}{0.6\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=9cm,height=5.6cm,xmin=0,xmax=8,xlabel={$t$ (s)},ylabel={$\omega$ (rad/s)},legend style={at={(0.02,0.02)},anchor=south west},legend columns=2]
+					\addplot[black,const plot] table[x=t,y=w] {data/p14_kf.dat};
+					\addplot[skdorange,const plot,thick] table[x=t,y=what] {data/p14_kf.dat};
+					\legend{sebenarnya, estimasi Kalman}
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.36\textwidth}
+			\small
+			Motor posisi dengan derau proses pada masukan dan derau pengukuran posisi; hanya posisi yang diukur.\\[4pt]
+			Estimasi kecepatan mengikuti nilai sebenarnya termasuk fluktuasi akibat derau proses (RMS galat $\approx 0{,}11$ rad/s).\\[4pt]
+			{\scriptsize Penalaan praktis: mulai dari $R_n = \sigma_v^2$ dari data sensor diam, lalu tala $Q_n$ hingga estimasi cukup responsif tanpa terlalu berderau.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{LQG dan MPC\texorpdfstring{\\[4pt]{\Large\en{LQG and MPC}}}{ / LQG and MPC}}
+% ===========================================================================
+
+\begin{frame}{LQG: LQR + filter Kalman}
+	\framesubtitle{LQG: LQR plus Kalman filter}
+	\begin{columns}[c]
+		\begin{column}{0.5\textwidth}
+			\centering
+			\begin{tikzpicture}[node distance=0.5cm]
+				\node[blk] (p) {Plant};
+				\node[blkd,below=0.7cm of p] (kf) {Filter Kalman};
+				\node[blkd,left=1.0cm of kf] (k) {$-K_{\text{LQR}}$};
+				\node[right=0.8cm of p] (y) {$y$};
+				\draw[sig] (p) -- coordinate[pos=0.4](m) (y);
+				\draw[sig] (m) |- (kf);
+				\draw[sig] ($(k.north)!0.5!(k.north east)$) |- ($(kf.north west)+(0,0.25)$) -- ($(kf.north west)+(0.25,0.25)$) -- ++(0,-0.25);
+				\draw[sig] (kf) -- node[above,lbl]{$\hat{\mathbf{x}}$} (k);
+				\draw[sig] (k) |- node[pos=0.75,above,lbl]{$u$} (p);
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\small
+			\begin{itemize}
+				\item Prinsip pemisahan berlaku: rancang $K$ (LQR) dan $L$ (Kalman) secara terpisah.
+				\item Optimal terhadap biaya kuadratik dengan derau Gaussian.
+				\item \alert{Tidak} ada jaminan margin ketegaran; selalu periksa $D(z)G(z)$.
+				\item Pilihan tugas besar: LQR (keadaan terukur) atau LQG (posisi terukur saja).
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Pengantar \textit{Model Predictive Control}}
+	\framesubtitle{Introduction to MPC}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Tiap cacah, selesaikan masalah optimisasi berhorison $N$:
+			\begin{align*}
+				\min_{u_0,\dots,u_{N-1}}\ & \sum_{i=0}^{N-1}\big(\mathbf{x}_i^\top Q\mathbf{x}_i + u_i^\top Ru_i\big) + \mathbf{x}_N^\top S\mathbf{x}_N\\
+				\text{s.t.}\ & \mathbf{x}_{i+1} = \Phi\mathbf{x}_i + \Gamma u_i,\ \ \mathbf{x}_0 = \hat{\mathbf{x}}[k]\\
+				& u_{\min} \le u_i \le u_{\max},\ \ \mathbf{x}_i \in \mathcal{X}
+			\end{align*}
+			Terapkan hanya $u_0$, lalu ulangi di cacah berikutnya (\textit{receding horizon}).
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{block}{Mengapa MPC?}
+				\small
+				\begin{itemize}
+					\item Menangani \textbf{batasan} aktuator dan keadaan secara eksplisit.
+					\item Tanpa batasan aktif, MPC dengan $S = P_{\text{DARE}}$ sama dengan LQR.
+					\item Butuh solver QP tiap cacah; menantang untuk Arduino UNO, layak untuk mikrokontroler yang lebih kuat atau horison pendek.
+				\end{itemize}
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Ringkasan dan latihan}
+	\framesubtitle{Summary and exercises}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Ringkasan}
+				\small
+				\begin{itemize}
+					\item LQR: $K = (R+\Gamma^\top P\Gamma)^{-1}\Gamma^\top P\Phi$, $P$ dari DARE.
+					\item Bryson untuk bobot awal; $R$ menggeser kompromi.
+					\item Kalman: pengamat \textit{current} dengan $L$ optimal dari $Q_n$, $R_n$.
+					\item LQG = LQR + Kalman; MPC menambahkan batasan.
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{PR-6 (bagian 2)}
+				\small
+				\begin{enumerate}
+					\item Implementasikan rekursi Riccati mundur dan tunjukkan konvergensinya ke \texttt{dlqr}.
+					\item Ulangi contoh LQR dengan $Q = \text{diag}(1, 0{,}1)$; apa efek bobot kecepatan?
+					\item Tala $Q_n$ filter Kalman untuk data posisi Modul 3 dan bandingkan estimasi kecepatan dengan tachometer.
+					\item Rancang LQG untuk motor posisi dan hitung PM-nya.
+				\end{enumerate}
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\end{document}

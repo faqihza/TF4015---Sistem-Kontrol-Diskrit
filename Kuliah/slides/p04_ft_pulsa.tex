@@ -1,0 +1,452 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{skd}
+
+\title[Pertemuan 4 -- Fungsi Transfer Pulsa]{Fungsi Transfer Pulsa dan Identifikasi Model}
+\subtitle{Pulse Transfer Function and Model Identification}
+\author{Ir. Estiyanti Ekawati, M.T., Ph.D. \quad\textbar\quad Faqihza Mukhlish, S.T., M.T., Ph.D.}
+\institute{Program Studi Teknik Fisika, Fakultas Teknologi Industri, Institut Teknologi Bandung}
+\date{Pertemuan 4 \textbar\ Semester I 2026/2027}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+	\titlepage
+\end{frame}
+
+\begin{frame}{Tujuan pertemuan}
+	\framesubtitle{Learning objectives}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{enumerate}
+				\item Menjelaskan fungsi transfer pulsa dan pengaruh letak pencacah dalam diagram blok.
+				\item Menurunkan \term{ekuivalen ZOH}{ZOH equivalent} dari plant kontinu.
+				\item Menyusun fungsi transfer pulsa kalang tertutup.
+				\item Mengidentifikasi model FOPDT dari respons tangga.
+				\item Mengestimasi model ARX dengan kuadrat terkecil dan memvalidasinya.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\begin{block}{Sub-CPMK S4}
+				\small Menurunkan fungsi transfer pulsa sistem tercacah dengan ZOH dan mengidentifikasi model empiris dari data.\\[3pt]
+				\en{Derive the pulse transfer function of a sampled system with ZOH and identify empirical models from data.}
+			\end{block}
+			{\small Bacaan: [OG] 3.3--3.5; [PH] Bab 4--5, 11; [FR] 8.2--8.3}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Fungsi Transfer Pulsa\texorpdfstring{\\[4pt]{\Large\en{Pulse Transfer Function}}}{ / Pulse Transfer Function}}
+% ===========================================================================
+
+\begin{frame}{Definisi}
+	\framesubtitle{Definition}
+	\begin{columns}[c]
+		\begin{column}{0.52\textwidth}
+			\small
+			Untuk sistem linier dengan masukan dan keluaran tercacah:
+			\[
+				G(z) = \frac{Y(z)}{U(z)}\Bigg|_{\text{KA nol}} = \mathcal{Z}\{g[k]\}
+			\]
+			dengan $g[k]$ respons impuls diskrit.\\[4pt]
+			Keluaran = konvolusi diskrit:
+			\[
+				y[k] = \sum_{j=0}^{k} g[j]\,u[k-j]\ \Longleftrightarrow\ Y(z) = G(z)U(z)
+			\]
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\centering
+			\begin{tikzpicture}[node distance=0.4cm,scale=0.9,transform shape]
+				\node (u) {$u[k]$};
+				\node[blk,right=of u] (zoh) {ZOH};
+				\node[blk,right=of zoh] (g) {$G(s)$};
+				\node[right=0.7cm of g] (y) {$y(t)$};
+				\draw[sig] (u) -- (zoh); \draw[sig] (zoh) -- node[above,lbl]{$u(t)$} (g); \draw[sig] (g) -- coordinate[pos=0.5](m) (y);
+				\draw[thick,skdblue] (m) ++(0,-0.6) -- ++(0.35,0.25);
+				\node[lbl] at ($(m)+(0.2,-0.85)$) {$T$};
+				\node[below=0.75cm of g] (yk) {$y[k]$};
+				\draw[dashed,skdgray] (m) |- (yk);
+				\draw[thick,skdorange,dashed,rounded corners] ($(zoh.north west)+(-0.15,0.25)$) rectangle ($(g.south east)+(0.15,-0.25)$);
+				\node[font=\scriptsize,text=skdorange] at ($(zoh)!0.5!(g)+(0,0.85)$) {$G_{\text{ZOH}}(z)$};
+			\end{tikzpicture}\\[4pt]
+			{\scriptsize Komputer hanya ``melihat'' hubungan $u[k] \rightarrow y[k]$.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Letak pencacah menentukan hasil}
+	\framesubtitle{Sampler placement matters}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\centering
+			\begin{tikzpicture}[node distance=0.4cm]
+				\node (u) {$U$};
+				\node[blk,right=0.7cm of u,minimum width=1cm] (g1) {$G_1$};
+				\node[blk,right=0.9cm of g1,minimum width=1cm] (g2) {$G_2$};
+				\node[right=0.7cm of g2] (y) {$Y$};
+				\draw[sig] (u) -- (g1); \draw[sig] (g1) -- (g2); \draw[sig] (g2) -- (y);
+				\draw[thick] ($(u)!0.5!(g1)+(-0.12,0.05)$) -- ++(0.25,0.2);
+				\draw[thick] ($(g1)!0.5!(g2)+(-0.12,0.05)$) -- ++(0.25,0.2);
+			\end{tikzpicture}\\[2pt]
+			{\small Pencacah di antara blok: $\dfrac{Y(z)}{U(z)} = G_1(z)\,G_2(z)$}\\[10pt]
+			\begin{tikzpicture}[node distance=0.4cm]
+				\node (u) {$U$};
+				\node[blk,right=0.7cm of u,minimum width=1cm] (g1) {$G_1$};
+				\node[blk,right=0.6cm of g1,minimum width=1cm] (g2) {$G_2$};
+				\node[right=0.7cm of g2] (y) {$Y$};
+				\draw[sig] (u) -- (g1); \draw[sig] (g1) -- (g2); \draw[sig] (g2) -- (y);
+				\draw[thick] ($(u)!0.5!(g1)+(-0.12,0.05)$) -- ++(0.25,0.2);
+			\end{tikzpicture}\\[2pt]
+			{\small Tanpa pencacah di antara: $\dfrac{Y(z)}{U(z)} = \overline{G_1G_2}(z) = \mathcal{Z}\{G_1(s)G_2(s)\}$}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{alertblock}{Perhatian}
+				\small
+				Secara umum $\overline{G_1G_2}(z) \neq G_1(z)G_2(z)$.\\[3pt]
+				Contoh: $G_1 = G_2 = \dfrac{1}{s+1}$:
+				\[
+					G_1(z)G_2(z) = \frac{z^2}{(z-e^{-T})^2}
+				\]
+				\[
+					\overline{G_1G_2}(z) = \mathcal{Z}\Big\{\frac{1}{(s+1)^2}\Big\} = \frac{Te^{-T}z}{(z-e^{-T})^2}
+				\]
+			\end{alertblock}
+			{\small Karena itu ZOH dan plant harus ditransformasikan \textbf{bersama}.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Ekuivalen ZOH}
+	\framesubtitle{The ZOH equivalent}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			ZOH dan plant ditransformasikan bersama:
+			\[
+				G(z) = \mathcal{Z}\left\{\frac{1-e^{-sT}}{s}G(s)\right\}
+			\]
+			Karena $e^{-sT}$ setara $z^{-1}$:
+			\begin{block}{}
+				\[
+					G(z) = (1 - z^{-1})\,\mathcal{Z}\left\{\frac{G(s)}{s}\right\}
+				\]
+			\end{block}
+			\textbf{Interpretasi}: $G(z)$ memberi nilai \textbf{eksak} keluaran plant pada saat cacah untuk masukan yang konstan sepotong-sepotong. Tidak ada aproksimasi.
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\small
+			\textbf{Langkah praktis}
+			\begin{enumerate}
+				\item Hitung $G(s)/s$ (respons tangga).
+				\item Uraikan dalam pecahan parsial di domain $s$.
+				\item Ganti tiap suku dengan transformasi Z-nya (tabel).
+				\item Kalikan dengan $(z-1)/z$.
+			\end{enumerate}
+			\vspace{0.1cm}
+			\begin{block}{Perangkat lunak}
+				\scriptsize
+				MATLAB: \texttt{c2d(G,T,'zoh')}\\
+				Python: \texttt{control.c2d(G,T,'zoh')}
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Contoh 1: plant kecepatan motor}
+	\framesubtitle{Example 1: motor speed plant}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			$G_v(s) = \dfrac{K}{\tau s+1}$. Langkah 1--2:
+			\[
+				\frac{G_v(s)}{s} = K\left[\frac{1}{s} - \frac{1}{s+1/\tau}\right]
+			\]
+			Langkah 3: $\ \mathcal{Z}\{\cdot\} = K\left[\dfrac{z}{z-1} - \dfrac{z}{z-a}\right]$, $\ a = e^{-T/\tau}$\\[4pt]
+			Langkah 4:
+			\[
+				G_v(z) = \frac{z-1}{z}\cdot\frac{K(1-a)z}{(z-1)(z-a)} = \frac{K(1-a)}{z-a}
+			\]
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{block}{Angka acuan semester}
+				\small
+				$K=1$, $\tau=0{,}5$\,s, $T=0{,}1$\,s:
+				\[
+					a = e^{-0{,}2} = 0{,}8187,\quad b = 1-a = 0{,}1813
+				\]
+				\[
+					G_v(z) = \frac{0{,}1813}{z - 0{,}8187}
+				\]
+			\end{block}
+			\small Bandingkan dengan Euler maju (Pertemuan 3): $\dfrac{0{,}2}{z-0{,}8}$. Euler hanya mendekati; ZOH eksak.\\[3pt]
+			Kutub kontinu $s=-1/\tau$ dipetakan ke $z = e^{-T/\tau}$.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Contoh 2: plant posisi motor}
+	\framesubtitle{Example 2: motor position plant}
+	\begin{columns}[T]
+		\begin{column}{0.54\textwidth}
+			\small
+			$G_p(s) = \dfrac{K}{s(\tau s+1)}$. Pecahan parsial:
+			\[
+				\frac{G_p(s)}{s} = K\left[\frac{1}{s^2} - \frac{\tau}{s} + \frac{\tau}{s+1/\tau}\right]
+			\]
+			Setelah ditransformasi dan dikalikan $(z-1)/z$:
+			\[
+				G_p(z) = \frac{b_1z + b_0}{(z-1)(z-a)}
+			\]
+			\[
+				b_1 = K(T - \tau + \tau a),\qquad b_0 = K(\tau - \tau a - aT)
+			\]
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\begin{block}{Angka acuan}
+				\small
+				\[
+					G_p(z) = \frac{0{,}009365\,z + 0{,}008762}{(z-1)(z-0{,}8187)}
+				\]
+				Kutub: $z=1$ (integrator) dan $z=0{,}8187$.\\
+				Zero: $z = -0{,}9356$.
+			\end{block}
+			\begin{alertblock}{\textit{Sampling zero}}
+				\small
+				$G_p(s)$ tidak punya zero, tetapi $G_p(z)$ punya zero dekat $z=-1$. Zero ini muncul akibat pencacahan dan penting untuk perancangan \textit{deadbeat} (Pertemuan 10).
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Integrator, waktu tunda, dan kalang tertutup}
+	\framesubtitle{Integrator, time delay, and closed loop}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\small
+			\textbf{Pasangan berguna} (dengan ZOH):
+			\renewcommand{\arraystretch}{2.6}
+			\begin{tabular}{@{}l l@{}}
+				\toprule
+				$G(s)$ & $G(z)$ \\
+				\midrule
+				$\dfrac{K}{s}$ & $\dfrac{KT}{z-1}$ \\
+				$\dfrac{K}{\tau s+1}$ & $\dfrac{K(1-a)}{z-a}$ \\
+				$e^{-\theta s}G(s)$, $\theta = dT$ & $z^{-d}G(z)$ \\
+				\bottomrule
+			\end{tabular}\\[3pt]
+			{\scriptsize Tunda pecahan ($\theta$ bukan kelipatan $T$) memakai transformasi Z termodifikasi [OG 3.5].}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\centering
+			\begin{tikzpicture}[node distance=0.5cm]
+				\node[sum] (s) {};
+				\node[left=0.5cm of s] (r) {$R(z)$};
+				\node[blkd,right=of s,minimum width=1.0cm] (d) {$D(z)$};
+				\node[blk,right=of d,minimum width=1.0cm] (g) {$G(z)$};
+				\node[right=0.5cm of g] (y) {$Y(z)$};
+				\draw[sig] (r) -- (s); \draw[sig] (s) -- (d); \draw[sig] (d) -- (g); \draw[sig] (g) -- coordinate[pos=0.4](m) (y);
+				\draw[sig] (m) -- ++(0,-0.8) -| node[pos=0.9,left,lbl]{$-$} (s);
+			\end{tikzpicture}
+			\small
+			\[
+				\frac{Y(z)}{R(z)} = \frac{D(z)G(z)}{1 + D(z)G(z)}
+			\]
+			Persamaan karakteristik: $1 + D(z)G(z) = 0$.\\[3pt]
+			{\scriptsize Bila sensor $H(s)$ juga kontinu tanpa pencacah antara: pakai $\overline{GH}(z)$.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Identifikasi Model dari Data\texorpdfstring{\\[4pt]{\Large\en{Model Identification from Data}}}{ / Model Identification from Data}}
+% ===========================================================================
+
+\begin{frame}{Mengapa identifikasi?}
+	\framesubtitle{Why identify?}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\begin{itemize}
+				\item Parameter fisik ($J$, $b$, $R$, $K_t$) jarang diketahui akurat.
+				\item Model dari data langsung mencakup sensor, filter, driver, dan aktuator.
+				\item Yang diperlukan untuk perancangan: model \textbf{cukup akurat} di rentang frekuensi kerja.
+			\end{itemize}
+			\vspace{0.1cm}
+			\begin{block}{Alur identifikasi}
+				\small
+				rancang eksperimen $\rightarrow$ ambil data $\rightarrow$ pilih struktur model $\rightarrow$ estimasi parameter $\rightarrow$ \textbf{validasi}
+			\end{block}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{exampleblock}{Pada kit (Modul 1)}
+				\small
+				\begin{enumerate}
+					\item Kompensasi \textit{deadzone} motor terlebih dahulu.
+					\item Pilih titik operasi dan beri perubahan tangga pada masukan.
+					\item Rekam kecepatan dengan waktu cacah tetap.
+					\item Perhatikan: filter tachometer ($\tau_f = 0{,}1$\,s) ikut teridentifikasi.
+				\end{enumerate}
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Model FOPDT dari respons tangga}
+	\framesubtitle{FOPDT model from a step response}
+	\begin{columns}[c]
+		\begin{column}{0.5\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=7.4cm,height=5cm,xmin=0,xmax=7,ymin=0,ymax=2.2,xlabel={$t$ (s)},ylabel={$\Delta y$},ytick={0,0.566,1.264,2},yticklabels={0,$28{,}3\%$,$63{,}2\%$,$K\Delta u$},xtick={0.799,1.8,4,6},xticklabels={$t_{28}$,$t_{63}$,4,6}]
+					\addplot[skdblue] table[x=t,y=y] {data/fopdt_open.dat};
+					\draw[skdgray,dashed] (axis cs:0,0.566) -- (axis cs:0.799,0.566) -- (axis cs:0.799,0);
+					\draw[skdgray,dashed] (axis cs:0,1.264) -- (axis cs:1.8,1.264) -- (axis cs:1.8,0);
+					\draw[skdgray,dashed] (axis cs:0,2) -- (axis cs:7,2);
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\small
+			\textbf{Metode dua titik (Smith)}
+			\begin{align*}
+				K &= \frac{\Delta y_\infty}{\Delta u}\\
+				\tau &= 1{,}5\,(t_{63} - t_{28})\\
+				\theta &= t_{63} - \tau
+			\end{align*}
+			\begin{exampleblock}{Contoh (data Pertemuan 1)}
+				\small
+				$t_{28}=0{,}799$\,s, $t_{63}=1{,}800$\,s\\
+				$\Rightarrow \tau = 1{,}501$\,s, $\theta = 0{,}299$\,s\\
+				(nilai sebenarnya 1,5\,s dan 0,3\,s)
+			\end{exampleblock}
+			{\scriptsize Metode garis singgung (Ziegler--Nichols) lebih peka terhadap derau.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Model ARX dan kuadrat terkecil}
+	\framesubtitle{ARX models and least squares}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Struktur orde 1 (sesuai ekuivalen ZOH plant kecepatan):
+			\[
+				y[k] = a\,y[k-1] + b\,u[k-1] + e[k]
+			\]
+			Susun $N$ persamaan dalam bentuk matriks:
+			\[
+				\underbrace{\begin{bmatrix} y[1]\\ \vdots\\ y[N]\end{bmatrix}}_{\mathbf{Y}}
+				=
+				\underbrace{\begin{bmatrix} y[0] & u[0]\\ \vdots & \vdots\\ y[N-1] & u[N-1]\end{bmatrix}}_{\boldsymbol{\Phi}}
+				\underbrace{\begin{bmatrix} a\\ b\end{bmatrix}}_{\boldsymbol\theta}
+				+ \mathbf{e}
+			\]
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\small
+			Minimalkan $J = \|\mathbf{Y} - \boldsymbol\Phi\boldsymbol\theta\|^2$:
+			\begin{block}{}
+				\[
+					\hat{\boldsymbol\theta} = (\boldsymbol\Phi^\top\boldsymbol\Phi)^{-1}\boldsymbol\Phi^\top\mathbf{Y}
+				\]
+			\end{block}
+			Konversi ke parameter kontinu:
+			\[
+				\hat\tau = -\frac{T}{\ln\hat a},\qquad \hat K = \frac{\hat b}{1-\hat a}
+			\]
+			{\scriptsize MATLAB: \texttt{theta = Phi\textbackslash Y} atau \texttt{arx}. Python: \texttt{numpy.linalg.lstsq}.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Contoh identifikasi ARX}
+	\framesubtitle{ARX identification example}
+	\begin{columns}[c]
+		\begin{column}{0.58\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=9cm,height=5.4cm,xmin=0,xmax=12,ymin=-0.1,ymax=1.15,xlabel={$t$ (s)},legend style={at={(0.5,1.02)},anchor=south},legend columns=3]
+					\addplot[skdgray,const plot,thin] table[x=t,y=u] {data/p4_arx.dat};
+					\addplot[skdblue,only marks,mark=*,mark size=0.8pt] table[x=t,y=ym] {data/p4_arx.dat};
+					\addplot[skdorange] table[x=t,y=yh] {data/p4_arx.dat};
+					\legend{masukan $u$, data terukur, model ARX}
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.38\textwidth}
+			\small
+			Data: plant acuan + derau $\sigma = 0{,}02$, 120 sampel, $T=0{,}1$\,s.
+
+			\vspace{0.15cm}
+			\renewcommand{\arraystretch}{1.2}
+			\begin{tabular}{@{}l c c@{}}
+				\toprule
+				 & benar & estimasi \\
+				\midrule
+				$a$ & 0,8187 & 0,8217 \\
+				$b$ & 0,1813 & 0,1787 \\
+				$\tau$ (s) & 0,500 & 0,509 \\
+				$K$ & 1,000 & 1,002 \\
+				\bottomrule
+			\end{tabular}\\[4pt]
+			\textit{Fit} $= 100\Big(1 - \dfrac{\|y - \hat y\|}{\|y - \bar y\|}\Big) = 92{,}3\%$
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Validasi dan jebakan umum}
+	\framesubtitle{Validation and common pitfalls}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Validasi}
+				\small
+				\begin{itemize}
+					\item Uji model pada \textbf{data lain} yang tidak dipakai untuk estimasi.
+					\item Simulasikan model (bukan prediksi satu langkah) dan bandingkan.
+					\item Residu $e[k]$ sebaiknya acak, tidak berkorelasi dengan $u$.
+					\item Bandingkan $K$, $\tau$ di beberapa titik operasi.
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{alertblock}{Jebakan}
+				\small
+				\begin{itemize}
+					\item Masukan kurang ``kaya'' (hanya satu tangga): parameter sulit dibedakan.
+					\item \textit{Deadzone}, saturasi, atau gesekan membuat model linier hanya berlaku lokal.
+					\item Derau berwarna membuat estimasi LS bias.
+					\item $T$ jauh lebih kecil dari $\tau$: $\hat a$ sangat dekat 1 dan peka derau.
+				\end{itemize}
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Ringkasan dan latihan}
+	\framesubtitle{Summary and exercises}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Ringkasan}
+				\small
+				\begin{itemize}
+					\item $G(z) = (1-z^{-1})\mathcal{Z}\{G(s)/s\}$ eksak pada saat cacah.
+					\item Kutub $s=p$ menjadi $z=e^{pT}$; zero baru dapat muncul.
+					\item Kalang tertutup: $DG/(1+DG)$.
+					\item Model dari data: FOPDT (grafis) atau ARX (kuadrat terkecil), selalu divalidasi.
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{PR-2 (ringkas)}
+				\small
+				\begin{enumerate}
+					\item Turunkan $G_p(z)$ untuk $G_p(s)=K/(s(\tau s+1))$ dan periksa angka acuan.
+					\item Tentukan ekuivalen ZOH dari $\dfrac{2}{(s+1)(s+3)}$ dengan $T=0{,}2$\,s.
+					\item Buktikan $\overline{G_1G_2}(z) \neq G_1(z)G_2(z)$ untuk contoh di slide.
+					\item Dengan data Modul 1 (atau data sintetis), estimasi model ARX orde 1 dan laporkan $K$, $\tau$, dan \textit{fit}.
+				\end{enumerate}
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\end{document}

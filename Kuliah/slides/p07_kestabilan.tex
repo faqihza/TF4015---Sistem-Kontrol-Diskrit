@@ -1,0 +1,344 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{skd}
+
+\title[Pertemuan 7 -- Kestabilan]{Analisis Kestabilan Sistem Diskrit}
+\subtitle{Stability Analysis of Discrete-Time Systems}
+\author{Ir. Estiyanti Ekawati, M.T., Ph.D. \quad\textbar\quad Faqihza Mukhlish, S.T., M.T., Ph.D.}
+\institute{Program Studi Teknik Fisika, Fakultas Teknologi Industri, Institut Teknologi Bandung}
+\date{Pertemuan 7 \textbar\ Semester I 2026/2027}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+	\titlepage
+\end{frame}
+
+\begin{frame}{Tujuan pertemuan}
+	\framesubtitle{Learning objectives}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{enumerate}
+				\item Menyatakan syarat kestabilan BIBO sistem diskrit.
+				\item Menerapkan uji Jury.
+				\item Menerapkan transformasi bilinear dan kriteria Routh--Hurwitz.
+				\item Menghitung rentang penguatan stabil.
+				\item Menjelaskan pengaruh waktu cacah dan tunda komputasi terhadap kestabilan.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\begin{block}{Sub-CPMK S7}
+				\small Menguji kestabilan sistem kontrol diskrit dan menganalisis pengaruh waktu cacah serta waktu tunda.\\[3pt]
+				\en{Test the stability of discrete-time control systems and analyse the effect of sampling period and delay.}
+			\end{block}
+			{\small Bacaan: [OG] 4.3; [PH] Bab 7}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Syarat Kestabilan\texorpdfstring{\\[4pt]{\Large\en{Stability Conditions}}}{ / Stability Conditions}}
+% ===========================================================================
+
+\begin{frame}{Kestabilan BIBO}
+	\framesubtitle{BIBO stability}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Sistem dengan respons impuls $g[k]$ stabil BIBO jika dan hanya jika
+			\[
+				\sum_{k=0}^{\infty} |g[k]| < \infty
+			\]
+			Untuk $G(z)$ rasional, setiap kutub $p_i$ menyumbang suku $c_ip_i^k$, sehingga
+			\begin{block}{}
+				\centering
+				Stabil $\iff$ semua kutub $|p_i| < 1$
+			\end{block}
+			\begin{itemize}
+				\item $|p|=1$ sederhana: stabil marginal (osilasi tetap atau integrator).
+				\item $|p|>1$ atau $|p|=1$ berulang: tidak stabil.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\centering
+			\begin{tikzpicture}[scale=1.3]
+				\fill[skdgreen!15] (0,0) circle (1);
+				\fill[skdred!8] (-1.6,-1.4) rectangle (1.6,1.4);
+				\fill[skdgreen!15] (0,0) circle (1);
+				\draw[thick,skdblue] (0,0) circle (1);
+				\draw[-{Stealth}] (-1.6,0) -- (1.7,0) node[right,font=\scriptsize]{Re};
+				\draw[-{Stealth}] (0,-1.4) -- (0,1.5) node[above,font=\scriptsize]{Im};
+				\node[font=\scriptsize,text=skdgreen!50!black] at (-0.35,0.45) {stabil};
+				\node[font=\scriptsize,text=skdred] at (1.2,1.15) {tidak stabil};
+				\node[font=\tiny,anchor=north west] at (1,0) {1};
+				\node[font=\tiny,anchor=north east] at (-1,0) {$-1$};
+			\end{tikzpicture}\\
+			{\scriptsize Persamaan karakteristik kalang tertutup: $1+D(z)G(z)=0$}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Fakta penting: pencacahan dapat menggoyahkan sistem}
+	\framesubtitle{Key fact: sampling can destabilise a loop}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			\textbf{Plant kecepatan + kontrol P}
+			\begin{itemize}
+				\item Kontinu: kutub $s = -(1+K_pK)/\tau$, \alert{stabil untuk semua} $K_p > 0$.
+				\item Diskrit: kutub $z_{cl} = a - K_pb$. Stabil jika $-1 < a - K_pb < 1$:
+			\end{itemize}
+			\[
+				0 < K_p < \frac{1+a}{K(1-a)} = \frac{1{,}8187}{0{,}1813} = 10{,}03
+			\]
+			{\scriptsize (dengan $K=1$, $\tau=0{,}5$\,s, $T=0{,}1$\,s)}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{alertblock}{Mengapa?}
+				\small
+				ZOH menahan aksi kontrol selama $T$. Penguatan besar menghasilkan koreksi berlebih yang baru ``dilihat'' satu cacah kemudian, sehingga keluaran bergantian tanda dan membesar.\\[3pt]
+				Untuk $K_p > a/b = 4{,}52$: $z_{cl} < 0$, respons sudah bergantian tanda.
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Uji Jury\texorpdfstring{\\[4pt]{\Large\en{The Jury Test}}}{ / The Jury Test}}
+% ===========================================================================
+
+\begin{frame}{Uji Jury}
+	\framesubtitle{Jury stability test}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			$P(z) = a_nz^n + a_{n-1}z^{n-1} + \dots + a_1z + a_0$, $a_n > 0$.\\[3pt]
+			\textbf{Syarat perlu} (cek dulu):
+			\begin{enumerate}
+				\item $P(1) > 0$
+				\item $(-1)^nP(-1) > 0$
+				\item $|a_0| < a_n$
+			\end{enumerate}
+			\textbf{Tabel Jury} (untuk $n \ge 3$):
+			\[
+				b_k = \begin{vmatrix} a_0 & a_{n-k}\\ a_n & a_k\end{vmatrix} = a_0a_k - a_na_{n-k}
+			\]
+			Syarat tambahan $|b_0| > |b_{n-1}|$, lalu ulangi pada baris $c_k$ dari $b_k$, dst., hingga tersisa 3 elemen.
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{block}{Orde 2: cukup tiga syarat}
+				\small
+				$P(z) = z^2 + a_1z + a_0$ stabil jika
+				\[
+					P(1)>0,\quad P(-1)>0,\quad |a_0|<1
+				\]
+				Di bidang $(a_1, a_0)$ ini adalah \textbf{segitiga kestabilan}.
+			\end{block}
+			\centering
+			\begin{tikzpicture}[scale=0.85]
+				\fill[skdgreen!20,draw=skdgreen] (-2,1) -- (2,1) -- (0,-1) -- cycle;
+				\draw[-{Stealth}] (-2.5,0) -- (2.6,0) node[right,font=\scriptsize]{$a_1$};
+				\draw[-{Stealth}] (0,-1.3) -- (0,1.5) node[above,font=\scriptsize]{$a_0$};
+				\node[font=\tiny,anchor=south] at (-2,1) {$(-2,1)$};
+				\node[font=\tiny,anchor=south] at (2,1) {$(2,1)$};
+				\node[font=\tiny,anchor=west] at (0.05,-1) {$(0,-1)$};
+			\end{tikzpicture}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Contoh uji Jury orde 3}
+	\framesubtitle{Third-order Jury example}
+	\begin{columns}[T]
+		\begin{column}{0.54\textwidth}
+			\small
+			$P(z) = z^3 - 0{,}49z + 0{,}12$\quad($a_3=1$, $a_2=0$, $a_1=-0{,}49$, $a_0=0{,}12$)\\[4pt]
+			\textbf{Syarat perlu}:
+			\begin{itemize}
+				\item $P(1) = 1 - 0{,}49 + 0{,}12 = 0{,}63 > 0$ \checkmark
+				\item $(-1)^3P(-1) = -(-1 + 0{,}49 + 0{,}12) = 0{,}39 > 0$ \checkmark
+				\item $|a_0| = 0{,}12 < 1$ \checkmark
+			\end{itemize}
+			\textbf{Tabel}:
+			\renewcommand{\arraystretch}{1.25}
+			\begin{tabular}{@{}l c c c c@{}}
+				\toprule
+				Baris & $z^0$ & $z^1$ & $z^2$ & $z^3$ \\
+				\midrule
+				1 & 0,12 & $-0{,}49$ & 0 & 1 \\
+				2 & 1 & 0 & $-0{,}49$ & 0,12 \\
+				3 ($b_k$) & $-0{,}9856$ & $-0{,}0588$ & 0,49 & \\
+				\bottomrule
+			\end{tabular}
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\small
+			$b_0 = (0{,}12)(0{,}12) - (1)(1) = -0{,}9856$\\
+			$b_1 = (0{,}12)(-0{,}49) - (1)(0) = -0{,}0588$\\
+			$b_2 = (0{,}12)(0) - (1)(-0{,}49) = 0{,}49$\\[4pt]
+			Syarat $|b_0| = 0{,}9856 > |b_2| = 0{,}49$ \checkmark
+			\begin{block}{Kesimpulan}
+				Semua syarat terpenuhi: \textbf{stabil}.\\
+				Cek: akar $P(z)$ adalah $0{,}5$; $0{,}3$; $-0{,}8$.
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Contoh: rentang $K_p$ plant posisi}
+	\framesubtitle{Example: stable gain range for the position plant}
+	\begin{columns}[T]
+		\begin{column}{0.54\textwidth}
+			\small
+			$G_p(z) = \dfrac{b_1z+b_0}{(z-1)(z-a)}$, $D(z)=K_p$. Persamaan karakteristik:
+			\[
+				z^2 + (K_pb_1 - 1 - a)z + (a + K_pb_0) = 0
+			\]
+			Syarat Jury orde 2:
+			\begin{enumerate}
+				\item $P(1) = K_p(b_1+b_0) > 0$ $\Rightarrow$ $K_p > 0$
+				\item $P(-1) = 2(1+a) - K_p(b_1-b_0) > 0$ $\Rightarrow$ $K_p < 6\,032$
+				\item $|a + K_pb_0| < 1$ $\Rightarrow$ $K_p < \dfrac{1-a}{b_0}$
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\begin{block}{Hasil}
+				\small
+				\[
+					0 < K_p < \frac{0{,}1813}{0{,}008762} = 20{,}69
+				\]
+				Pada $K_p = 20{,}69$ kedua kutub berada tepat di $|z|=1$ (kompleks): osilasi tetap.
+			\end{block}
+			\small Versi kontinu $K/(s(\tau s+1))$ + P stabil untuk \textbf{semua} $K_p>0$. Lagi-lagi pencacahan membatasi penguatan.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Transformasi Bilinear dan Routh--Hurwitz\texorpdfstring{\\[4pt]{\Large\en{Bilinear Transformation and Routh--Hurwitz}}}{ / Bilinear Transformation and Routh-Hurwitz}}
+% ===========================================================================
+
+\begin{frame}{Transformasi $w$}
+	\framesubtitle{The $w$-transformation}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			Substitusi
+			\[
+				z = \frac{1+w}{1-w}\qquad\Longleftrightarrow\qquad w = \frac{z-1}{z+1}
+			\]
+			memetakan bagian dalam lingkaran satuan ke \textbf{setengah bidang kiri} bidang $w$.\\[4pt]
+			Prosedur:
+			\begin{enumerate}
+				\item Substitusi ke $P(z)$, kalikan dengan $(1-w)^n$.
+				\item Terapkan tabel Routh pada polinomial $w$.
+				\item Jumlah perubahan tanda kolom pertama = jumlah akar di luar lingkaran satuan.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{exampleblock}{Contoh: kecepatan + P + tunda satu cacah}
+				\small
+				Tunda komputasi: $L(z) = \dfrac{K_pb}{z(z-a)}$.
+				\[
+					P(z) = z^2 - az + K_pb
+				\]
+				Dengan $z = \frac{1+w}{1-w}$, dikali $(1-w)^2$:
+				\[
+					(1+a+K_pb)w^2 + 2(1-K_pb)w + (1-a+K_pb)
+				\]
+				Semua koefisien positif (orde 2) $\iff$ $K_pb < 1$:
+				\[
+					K_p < \frac{1}{b} = 5{,}52
+				\]
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Pengaruh waktu cacah dan tunda}
+	\framesubtitle{Effect of sampling period and delay}
+	\begin{columns}[c]
+		\begin{column}{0.56\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=8.6cm,height=5.8cm,xmin=0,xmax=1,ymode=log,ymin=0.8,ymax=2000,xlabel={$T$ (s)},ylabel={$K_{p,\max}$},legend style={at={(0.98,0.98)},anchor=north east}]
+					\addplot[skdblue] table[x=T,y=k1] {data/p7_kmax.dat};
+					\addplot[skdorange,dashed] table[x=T,y=k1d] {data/p7_kmax.dat};
+					\addplot[skdgreen] table[x=T,y=kpos] {data/p7_kmax.dat};
+					\legend{kecepatan + P, kecepatan + P + tunda, posisi + P}
+					\draw[skdgray,dashed] (axis cs:0.1,0.8) -- (axis cs:0.1,2000);
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\small
+			$\tau=0{,}5$\,s, $K=1$:
+			\begin{itemize}
+				\item $K_{p,\max} \to \infty$ bila $T \to 0$ (kembali ke kasus kontinu).
+				\item Memperbesar $T$ menurunkan $K_{p,\max}$ dengan cepat.
+				\item Tunda komputasi satu cacah memotong $K_{p,\max}$ hampir setengahnya ($10{,}03 \rightarrow 5{,}52$ pada $T=0{,}1$\,s).
+			\end{itemize}
+			\kunci{Rumus: $\dfrac{1+a}{1-a} = \coth\dfrac{T}{2\tau}$ untuk kecepatan + P.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Memilih metode uji}
+	\framesubtitle{Choosing a test}
+	\begin{columns}[T]
+		\begin{column}{0.32\textwidth}
+			\begin{block}{Hitung akar}
+				\small
+				\texttt{roots}, \texttt{pole}. Paling langsung bila semua parameter numerik.
+			\end{block}
+		\end{column}
+		\begin{column}{0.32\textwidth}
+			\begin{block}{Jury / bilinear + Routh}
+				\small
+				Untuk parameter simbolik (misalnya mencari rentang $K_p$ atau $T$).
+			\end{block}
+		\end{column}
+		\begin{column}{0.32\textwidth}
+			\begin{block}{\textit{Root locus} / Nyquist}
+				\small
+				Untuk melihat \textbf{bagaimana} kutub bergerak dan seberapa besar margin (Pertemuan 9--10).
+			\end{block}
+		\end{column}
+	\end{columns}
+	\vspace{0.3cm}
+	\begin{alertblock}{Kestabilan $\neq$ kinerja}
+		\small Sistem stabil dengan kutub di $|z| = 0{,}98$ secara teknis stabil, tetapi responsnya lambat dan berosilasi panjang. Selalu periksa juga margin kestabilan dan daerah kutub yang diinginkan (Pertemuan 6).
+	\end{alertblock}
+\end{frame}
+
+\begin{frame}{Ringkasan, latihan, dan persiapan UTS}
+	\framesubtitle{Summary, exercises, and midterm preparation}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Ringkasan}
+				\small
+				\begin{itemize}
+					\item Stabil $\iff$ semua kutub di dalam lingkaran satuan.
+					\item Jury: $P(1)>0$, $(-1)^nP(-1)>0$, $|a_0|<a_n$, ditambah tabel.
+					\item Bilinear $w$ + Routh: alternatif yang setara.
+					\item $T$ besar dan tunda komputasi menurunkan penguatan maksimum.
+				\end{itemize}
+			\end{block}
+			\begin{exampleblock}{Cakupan UTS}
+				\small Pertemuan 1--7: pencacahan, transformasi Z, ZOH, identifikasi, emulasi/PID, respons, kestabilan.
+			\end{exampleblock}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{Latihan}
+				\small
+				\begin{enumerate}
+					\item Uji kestabilan $P(z) = z^3 - 1{,}2z^2 + 0{,}5z - 0{,}1$ dengan Jury.
+					\item Tentukan rentang $K_p$ stabil untuk plant posisi dengan tunda komputasi satu cacah.
+					\item Turunkan $K_{p,\max}$ plant kecepatan sebagai fungsi $T/\tau$ dan buktikan bentuk $\coth$.
+					\item Untuk $K_p = 8$ (plant kecepatan, $T=0{,}1$\,s), hitung $z_{cl}$ dan sketsakan respons tangga.
+				\end{enumerate}
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\end{document}

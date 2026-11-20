@@ -1,0 +1,93 @@
+\chapter{Respons Frekuensi dan Perancangan Langsung}
+\label{bab:frek}
+\enchap{Frequency Response and Direct Design}
+
+\begin{tujuan}
+	Setelah mempelajari bab ini, Anda mampu menghitung respons frekuensi dan margin kestabilan sistem diskrit, menjelaskan pengaruh ZOH pada margin fasa, memakai transformasi $w$ untuk perancangan dengan diagram Bode, serta merancang pengontrol \textit{deadbeat} dan Dahlin dengan metode Ragazzini.
+\end{tujuan}
+
+\section{Respons frekuensi sistem diskrit}
+Masukan sinusoidal $u[k] = \sin(\omega kT)$ pada sistem stabil $G(z)$ menghasilkan keluaran tunak
+\begin{equation}
+	y[k] = |G(e^{j\omega T})|\sin\big(\omega kT + \angle G(e^{j\omega T})\big).
+\end{equation}
+Respons frekuensi diperoleh dengan mengevaluasi $G(z)$ pada lingkaran satuan $z = e^{j\omega T}$. Respons ini periodik dengan periode $\omega_s$, sehingga cukup digambar hingga $\omega_N = \pi/T$. Margin penguatan (GM) dan margin fasa (PM) didefinisikan seperti pada sistem kontinu. Acuan praktik yang umum adalah PM $30^\circ$--$60^\circ$, GM $\ge 6$\,dB, dan puncak sensitivitas $M_s \le 2$; untuk PM di bawah $60^\circ$, redaman kalang tertutup kira-kira $\zeta \approx \text{PM}/100$.
+
+\begin{contoh}[Pengaruh ZOH pada margin]
+	Plant posisi dengan $K_p = 5$. Versi kontinu memiliki frekuensi \textit{crossover} 2,86 rad/s, PM $= 34{,}9^\circ$, dan GM tak hingga. Versi diskrit dengan $T = 0{,}1$\,s memiliki \textit{crossover} yang sama, tetapi PM $= 26{,}8^\circ$ dan GM $= 12{,}3$\,dB pada 6,22 rad/s. Selisih PM sekitar $\omega_cT/2 = 8{,}2^\circ$ adalah tunda setengah cacah dari ZOH, dan fasa yang terus turun menuju $\omega_N$ membuat GM menjadi berhingga.
+\end{contoh}
+
+\section{Transformasi $w$}
+Transformasi
+\begin{equation}
+	w = \frac{2}{T}\,\frac{z-1}{z+1},\qquad z = \frac{1 + wT/2}{1 - wT/2}
+\end{equation}
+memetakan lingkaran satuan ke sumbu imajiner $w = j\nu$, dengan frekuensi semu $\nu = \frac{2}{T}\tan\frac{\omega T}{2}$. Fungsi $G(w)$ rasional sehingga seluruh alat Bode kontinu dapat dipakai. Di bawah sekitar $\omega_s/10$, $\nu \approx \omega$; dengan $T = 0{,}1$\,s, $\omega = 10$ rad/s menjadi $\nu = 10{,}9$, sedangkan $\omega = 30$ rad/s menjadi $\nu = 282$. Prosedur perancangannya: hitung $G(z)$ (ZOH) lalu $G(w)$; rancang $C(w)$ dengan Bode untuk PM dan GM target; substitusi $w = \frac2T\frac{z-1}{z+1}$ untuk memperoleh $D(z)$; verifikasi di domain waktu. Berbeda dari emulasi Tustin, ZOH sudah termasuk dalam $G(w)$ sehingga tidak ada aproksimasi.
+
+\section{Perancangan langsung (Ragazzini)}
+Dalam metode Ragazzini, fungsi transfer kalang tertutup yang diinginkan $F(z)$ ditentukan terlebih dahulu, lalu kontroler diselesaikan dari $F = DG/(1+DG)$:
+\begin{equation}
+	D(z) = \frac{1}{G(z)}\,\frac{F(z)}{1 - F(z)}.
+\end{equation}
+Karena kontroler ini ``membalik'' plant, $F(z)$ harus memenuhi tiga syarat:
+\begin{enumerate}
+	\item \textbf{Kausalitas}: tunda $F$ tidak boleh lebih kecil dari tunda $G$ (selisih derajat penyebut dan pembilang).
+	\item \textbf{Kestabilan internal}: zero $G$ di luar atau dekat lingkaran satuan harus menjadi zero $F$, dan kutub $G$ yang tidak stabil harus menjadi zero $1-F$.
+	\item \textbf{Galat tunak}: untuk masukan tangga, $F(1) = 1$, yaitu $1-F(z)$ mengandung faktor $(z-1)$.
+\end{enumerate}
+
+\begin{contoh}[\textit{Deadbeat} dan Dahlin pada plant kecepatan]
+	$G_v(z) = b/(z-a)$ memiliki tunda satu cacah tanpa zero bermasalah. Pengontrol \textbf{\textit{deadbeat}} memilih $F(z) = z^{-1}$, sehingga keluaran tepat di \textit{setpoint} setelah satu cacah:
+	\[
+		D(z) = \frac{z-a}{b}\cdot\frac{z^{-1}}{1-z^{-1}} = \frac{z-a}{b(z-1)}.
+	\]
+	Ini adalah PI dengan zero yang membatalkan kutub plant. Aksi awalnya $u[0] = 1/b = 5{,}52$, lalu $u[k] = 1$. Pengontrol \textbf{Dahlin} memilih respons orde satu dengan konstanta waktu $\lambda$: $F(z) = (1-q)/(z-q)$ dengan $q = e^{-T/\lambda}$, sehingga
+	\[
+		D(z) = \frac{(1-q)(z-a)}{b(z-1)}.
+	\]
+	Dengan $\lambda = 0{,}3$\,s, $q = 0{,}7165$ dan $u[0] = (1-q)/b = 1{,}56$. Respons lebih lambat ($y = 0{,}28;\ 0{,}49;\ 0{,}63;\ \dots$) tetapi usaha kontrol jauh lebih kecil. Parameter $\lambda$ menjadi satu tombol penala antara kecepatan dan usaha kontrol.
+\end{contoh}
+
+\begin{contoh}[\textit{Deadbeat} plant posisi dan riak antar-cacah]
+	Untuk plant posisi, pilihan \textit{minimal prototype} $F = z^{-1}$ menghasilkan $D(z)$ yang membatalkan \textit{sampling zero} $-0{,}936$. Sampel $y[k]$ memang mencapai 1 setelah satu cacah, tetapi aksi kontrol bergantian tanda dengan amplitudo ratusan dan keluaran kontinu $y(t)$ beriak di antara cacah (Gambar~\ref{fig:b9-ripple}). Desain \textbf{bebas riak} memasukkan zero plant ke dalam $F$:
+	\[
+		F(z) = \frac{b_1z + b_0}{(b_1+b_0)z^2},\qquad 1 - F(z) = (1 - z^{-1})(1 + cz^{-1}),\quad c = \frac{b_0}{b_1+b_0} = 0{,}483,
+	\]
+	sehingga $D(z) = \dfrac{1 - az^{-1}}{(b_1+b_0)(1 + cz^{-1})}$. Respons selesai dalam dua cacah dan $u$ konstan setelahnya, tetapi $u[0] = 55$ masih sangat besar karena $T$ kecil. \textit{Deadbeat} cocok bila $T$ besar atau aktuator kuat.
+\end{contoh}
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}
+		\begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.5cm},skd,width=7cm,height=4.8cm,xmin=0,xmax=1.5,xlabel={$t$ (s)}]
+			\nextgroupplot[ylabel={$y(t)$},ymin=0,ymax=1.5,legend style={at={(0.98,0.97)},anchor=north east}]
+			\addplot[skdgray,dashed,thin,domain=0:1.5,forget plot] {1};
+			\addplot[skdred] table[x=t,y=ymp] {\dat{p10_ripple.dat}};
+			\addplot[skdblue] table[x=t,y=yrf] {\dat{p10_ripple.dat}};
+			\legend{\textit{minimal prototype}, bebas riak}
+			\nextgroupplot[ylabel={$u$},ymin=-200,ymax=200]
+			\addplot[skdred] table[x=t,y=ump] {\dat{p10_ripple.dat}};
+			\addplot[skdblue] table[x=t,y=urf] {\dat{p10_ripple.dat}};
+		\end{groupplot}
+	\end{tikzpicture}
+	\caption{\textit{Deadbeat} plant posisi: riak antar-cacah dan desain bebas riak}
+	\label{fig:b9-ripple}
+\end{figure}
+
+Perancangan langsung cocok untuk proses lambat dengan $T$ relatif besar, plant dengan tunda murni (Dahlin memberi bentuk respons yang dapat diprediksi), dan kasus dengan model akurat serta aktuator yang tidak mudah jenuh. Kelemahannya: pembatalan plant peka terhadap galat model, usaha kontrol besar bila $T$ kecil, respons hanya dijamin pada saat cacah, dan tidak ada jaminan margin kestabilan.
+
+\begin{ringkasan}
+	Respons frekuensi diskrit dievaluasi pada $z = e^{j\omega T}$ hingga $\omega_N$; ZOH mengurangi PM sekitar $\omega_cT/2$. Transformasi $w$ memungkinkan perancangan Bode untuk plant diskrit tanpa aproksimasi. Metode Ragazzini $D = \frac{1}{G}\frac{F}{1-F}$ memerlukan $F$ yang kausal, menjamin kestabilan internal, dan memenuhi galat tunak. \textit{Deadbeat} cepat tetapi mahal; Dahlin lebih lunak.\\[3pt]
+	\en{Discrete frequency response and margins; the ZOH costs about $\omega_cT/2$ of phase margin; $w$-plane design applies Bode methods exactly; Ragazzini's method specifies the closed loop directly, with deadbeat and Dahlin as special cases.}
+\end{ringkasan}
+
+\paragraph{Istilah kunci.} respons frekuensi \en{(frequency response)}, margin fasa/penguatan \en{(phase/gain margin)}, transformasi $w$ \en{($w$-transformation)}, perancangan langsung \en{(direct design)}, \textit{deadbeat}, riak antar-cacah \en{(intersample ripple)}.
+
+\section*{Latihan}
+\begin{enumerate}
+	\item Hitung $G_p(w)$ untuk plant posisi dan rancang \textit{lead} agar PM $= 50^\circ$.
+	\item Rancang Dahlin untuk plant kecepatan dengan $\lambda = 0{,}2$\,s dan hitung $u[0]$.
+	\item Turunkan $D(z)$ \textit{deadbeat} bebas riak untuk plant posisi dan periksa barisan $u[k]$.
+	\item Ulangi \textit{deadbeat} plant posisi untuk $T = 0{,}5$\,s; bandingkan $u[0]$ dengan $T = 0{,}1$\,s.
+	\item Jelaskan mengapa \textit{deadbeat} \textit{minimal prototype} menimbulkan riak bila $G(z)$ memiliki zero dekat $z = -1$.
+\end{enumerate}

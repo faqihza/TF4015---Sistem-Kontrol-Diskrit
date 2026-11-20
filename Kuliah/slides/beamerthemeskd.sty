@@ -13,6 +13,7 @@
 \RequirePackage{booktabs}
 \RequirePackage{array}
 \pgfplotsset{compat=1.17}
+\usepgfplotslibrary{groupplots,fillbetween}
 \usetikzlibrary{arrows.meta,positioning,calc,fit,shapes.geometric,decorations.pathreplacing}
 
 % ---------------------------------------------------------------------------
@@ -87,10 +88,10 @@
 	\begin{tikzpicture}[remember picture,overlay]
 		\fill[skdblue] (current page.south west) rectangle (current page.north east);
 		\fill[skdorange] ([yshift=-0.2cm]current page.west) rectangle ++(\paperwidth,0.08cm);
-		\node[anchor=south west,text width=0.85\paperwidth,align=left,inner sep=0]
+		\node[anchor=south west,text width=0.85\paperwidth,align=left,inner sep=0,execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000}]
 			at ([xshift=1.1cm,yshift=0.4cm]current page.west) {%
 				{\color{white!75!skdblue}\small TF4015 Sistem Kontrol Diskrit \textbar\ \en{Discrete-Time Control Systems}}\\[0.35cm]
-				{\usebeamerfont{title}\usebeamercolor[fg]{title}\LARGE\bfseries\hyphenpenalty=10000\inserttitle}\\[0.2cm]
+				{\usebeamerfont{title}\usebeamercolor[fg]{title}\LARGE\bfseries\inserttitle}\\[0.2cm]
 				{\usebeamercolor[fg]{subtitle}\large\itshape\insertsubtitle}};
 		\node[anchor=north west,text width=0.85\paperwidth,align=left,inner sep=0,text=white]
 			at ([xshift=1.1cm,yshift=-0.6cm]current page.west) {%

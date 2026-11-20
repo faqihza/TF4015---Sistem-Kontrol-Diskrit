@@ -1,0 +1,128 @@
+\chapter{Kontrol Optimal Kuadratik dan Estimasi Optimal}
+\label{bab:lqr}
+\enchap{Quadratic Optimal Control and Optimal Estimation}
+
+\begin{tujuan}
+	Setelah mempelajari bab ini, Anda mampu merumuskan indeks kinerja kuadratik, memilih bobot $Q$ dan $R$, menghitung penguatan LQR dari persamaan Riccati diskrit, menerapkan filter Kalman diskrit, serta menjelaskan LQG dan prinsip dasar MPC.
+\end{tujuan}
+
+\section{\textit{Linear Quadratic Regulator}}
+Penempatan kutub menuntut perancang menentukan lokasi kutub, yang sulit untuk sistem orde tinggi atau banyak masukan. LQR mengganti pertanyaan ``di mana kutubnya'' dengan ``berapa biayanya''. Cari $u[k]$ yang meminimalkan
+\begin{equation}
+	J = \sum_{k=0}^{\infty}\Big(\mathbf{x}[k]^\top Q\,\mathbf{x}[k] + u[k]^\top R\,u[k]\Big),
+\end{equation}
+dengan $Q \succeq 0$ menghukum penyimpangan keadaan dan $R \succ 0$ menghukum usaha kontrol.
+
+\paragraph{Solusi horison tak hingga.} Solusi optimalnya adalah umpan balik keadaan konstan $u = -K\mathbf{x}$ dengan
+\begin{equation}
+	K = (R + \Gamma^\top P\Gamma)^{-1}\Gamma^\top P\Phi,
+\end{equation}
+dan $P$ solusi \term{persamaan Riccati aljabar diskrit}{discrete algebraic Riccati equation, DARE}:
+\begin{equation}
+	P = Q + \Phi^\top P\Phi - \Phi^\top P\Gamma(R + \Gamma^\top P\Gamma)^{-1}\Gamma^\top P\Phi.
+\end{equation}
+Di MATLAB tersedia \texttt{dlqr(Phi,Gam,Q,R)} dan di Python \texttt{control.dlqr}.
+
+\paragraph{Horison berhingga.} Untuk $J_N = \mathbf{x}[N]^\top S\mathbf{x}[N] + \sum_{k=0}^{N-1}(\mathbf{x}^\top Q\mathbf{x} + u^\top Ru)$, pemrograman dinamis memberi rekursi mundur dari $P_N = S$:
+\begin{equation}
+	K_k = (R + \Gamma^\top P_{k+1}\Gamma)^{-1}\Gamma^\top P_{k+1}\Phi,\qquad P_k = Q + \Phi^\top P_{k+1}(\Phi - \Gamma K_k).
+\end{equation}
+Bila $N \to \infty$, $P_k$ konvergen ke solusi DARE dan $K_k$ ke penguatan konstan.
+
+\paragraph{Sifat.} Kalang tertutup LQR dijamin stabil bila $(\Phi, \Gamma)$ terkendali dan $(\Phi, Q^{1/2})$ teramati. Perancang hanya memilih bobot dan kutub mengikuti secara otomatis, serta metode ini langsung berlaku untuk banyak masukan. Margin kestabilan LQR kontinu yang terkenal (PM $\ge 60^\circ$) tidak dijamin pada versi diskrit, sehingga margin tetap perlu diperiksa.
+
+\section{Memilih bobot}
+Aturan Bryson menormalisasi bobot dengan nilai maksimum yang dapat diterima:
+\begin{equation}
+	Q_{ii} = \frac{1}{x_{i,\max}^2},\qquad R_{jj} = \frac{1}{u_{j,\max}^2},
+\end{equation}
+lalu ditala dengan satu faktor $\rho$ pada $R$. Hanya rasio $Q/R$ yang menentukan hasil: $R$ kecil (kontrol ``murah'') memberi respons cepat dengan $u$ besar, sedangkan $R$ besar memberi respons lambat dengan $u$ kecil. Untuk motor posisi dengan $\theta_{\max} = 0{,}1$ rad dan $u_{\max} = 1$, diperoleh $Q = \text{diag}(100, 0)$ dan $R = 1$, setara dengan $Q = \text{diag}(1, 0)$ dan $R = 0{,}01$.
+
+\begin{contoh}[LQR motor posisi]
+	Dengan $Q = \text{diag}(1, 0)$, $T = 0{,}1$\,s, dan referensi melalui $\bar N$:
+	\begin{center}
+		\renewcommand{\arraystretch}{1.2}
+		\begin{tabular}{@{}l c c c@{}}
+			\toprule
+			$R$ & 0,01 & 0,1 & 1 \\
+			\midrule
+			$K$ & $[7{,}94\ \ 2{,}05]$ & $[2{,}85\ \ 0{,}98]$ & $[0{,}96\ \ 0{,}41]$ \\
+			$|z_{cl}|$ & 0,72 & 0,82 & 0,87 \\
+			$M_p$ & 3,1\% & 1,3\% & 0\% \\
+			$t_s$ (s) & 1,4 & 1,6 & 4,0 \\
+			$u_{\max}$ & 7,9 & 2,9 & 1,0 \\
+			\bottomrule
+		\end{tabular}
+	\end{center}
+	Satu parameter $R$ menggeser kompromi kecepatan--usaha secara mulus, dengan redaman yang selalu baik (Gambar~\ref{fig:b13-lqr}).
+\end{contoh}
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}
+		\begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.5cm},skd,width=7cm,height=4.8cm,xmin=0,xmax=4,xlabel={$t$ (s)}]
+			\nextgroupplot[ylabel={$\theta$},ymin=0,ymax=1.15,legend style={at={(0.98,0.05)},anchor=south east}]
+			\addplot[skdgray,dashed,thin,domain=0:4,forget plot] {1};
+			\addplot[skdred,const plot] table[x=t,y=y1] {\dat{p14_lqr.dat}};
+			\addplot[skdorange,const plot] table[x=t,y=y2] {\dat{p14_lqr.dat}};
+			\addplot[skdblue,const plot] table[x=t,y=y3] {\dat{p14_lqr.dat}};
+			\legend{$R=0{,}01$, $R=0{,}1$, $R=1$}
+			\nextgroupplot[ylabel={$u$},ymin=-1,ymax=8.5]
+			\addplot[skdred,const plot] table[x=t,y=u1] {\dat{p14_lqr.dat}};
+			\addplot[skdorange,const plot] table[x=t,y=u2] {\dat{p14_lqr.dat}};
+			\addplot[skdblue,const plot] table[x=t,y=u3] {\dat{p14_lqr.dat}};
+		\end{groupplot}
+	\end{tikzpicture}
+	\caption{Pengaruh bobot $R$ pada LQR motor posisi}
+	\label{fig:b13-lqr}
+\end{figure}
+
+\section{Filter Kalman}
+Model dengan derau proses dan derau pengukuran adalah
+\begin{align}
+	\mathbf{x}[k+1] &= \Phi\mathbf{x}[k] + \Gamma u[k] + \Gamma_ww[k],\\
+	y[k] &= C\mathbf{x}[k] + v[k],
+\end{align}
+dengan $w$ dan $v$ derau putih berrerata nol, saling bebas, dan berkovarians $Q_n$ dan $R_n$. Filter Kalman memberi estimasi yang meminimalkan $E\big[\|\mathbf{x} - \hat{\mathbf{x}}\|^2\big]$. Strukturnya sama dengan pengamat \textit{current} (Bab~\ref{bab:obs}), tetapi penguatannya dipilih secara optimal dari $Q_n$ dan $R_n$:
+
+\paragraph{Koreksi.}
+\begin{align}
+	L_k &= P_k^-C^\top\big(CP_k^-C^\top + R_n\big)^{-1},\\
+	\hat{\mathbf{x}}_k &= \hat{\mathbf{x}}_k^- + L_k\big(y[k] - C\hat{\mathbf{x}}_k^-\big),\\
+	P_k &= (I - L_kC)P_k^-.
+\end{align}
+\paragraph{Prediksi.}
+\begin{align}
+	\hat{\mathbf{x}}_{k+1}^- &= \Phi\hat{\mathbf{x}}_k + \Gamma u[k],\\
+	P_{k+1}^- &= \Phi P_k\Phi^\top + \Gamma_wQ_n\Gamma_w^\top.
+\end{align}
+Matriks $P$ adalah kovarians galat estimasi. Untuk sistem LTI, $P_k^-$ dan $L_k$ konvergen ke nilai tunak (solusi DARE dual), sehingga mikrokontroler cukup menyimpan $L$ konstan. Intuisinya: bila $R_n$ besar (sensor buruk), filter lebih percaya model dan $L$ kecil; bila $Q_n$ besar (model buruk), filter lebih percaya sensor dan $L$ besar.
+
+\begin{contoh}[Filter Kalman motor posisi]
+	Dengan derau proses pada masukan $Q_n = 0{,}5$ dan derau potensiometer $\sigma_v = 0{,}01$ rad, penguatan tunaknya $L_\infty = [0{,}765\ \ 5{,}326]^\top$ dengan kutub galat berjari-jari 0,44. Simulasi dengan hanya posisi yang diukur menghasilkan estimasi kecepatan yang mengikuti nilai sebenarnya, termasuk fluktuasi akibat derau proses, dengan RMS galat sekitar 0,11 rad/s. Penalaan praktis dimulai dengan $R_n = \sigma_v^2$ dari data sensor saat diam, lalu $Q_n$ ditala hingga estimasi cukup responsif tanpa terlalu berderau.
+\end{contoh}
+
+\section{LQG dan MPC}
+\term{LQG}{linear quadratic Gaussian} menggabungkan LQR dengan filter Kalman: $u = -K_{\text{LQR}}\hat{\mathbf{x}}$. Prinsip pemisahan berlaku sehingga $K$ dan $L$ dirancang terpisah, dan hasilnya optimal untuk biaya kuadratik dengan derau Gaussian. Namun LQG tidak memiliki jaminan margin ketegaran, sehingga $D(z)G(z)$ selalu perlu diperiksa.
+
+\term{\textit{Model predictive control}}{MPC} menyelesaikan masalah optimisasi berhorison $N$ setiap cacah:
+\begin{equation}
+	\min_{u_0,\dots,u_{N-1}}\sum_{i=0}^{N-1}\big(\mathbf{x}_i^\top Q\mathbf{x}_i + u_i^\top Ru_i\big) + \mathbf{x}_N^\top S\mathbf{x}_N
+\end{equation}
+dengan kendala $\mathbf{x}_{i+1} = \Phi\mathbf{x}_i + \Gamma u_i$, $\mathbf{x}_0 = \hat{\mathbf{x}}[k]$, $u_{\min} \le u_i \le u_{\max}$, dan batasan keadaan. Hanya $u_0$ yang diterapkan, lalu masalah diulang pada cacah berikutnya (\textit{receding horizon}). Kelebihan utamanya adalah penanganan batasan secara eksplisit. Tanpa batasan aktif dan dengan $S = P_{\text{DARE}}$, MPC identik dengan LQR. MPC memerlukan solver \textit{quadratic programming} setiap cacah, yang menantang untuk Arduino UNO tetapi layak pada mikrokontroler yang lebih kuat atau dengan horison pendek.
+
+\begin{ringkasan}
+	LQR: $K = (R + \Gamma^\top P\Gamma)^{-1}\Gamma^\top P\Phi$ dengan $P$ dari DARE. Aturan Bryson memberi bobot awal dan $R$ menggeser kompromi kinerja--usaha. Filter Kalman adalah pengamat \textit{current} dengan penguatan optimal dari $Q_n$ dan $R_n$. LQG menggabungkan keduanya; MPC menambahkan batasan.\\[3pt]
+	\en{LQR minimises a quadratic cost via the discrete Riccati equation; Bryson's rule gives initial weights; the Kalman filter is the optimal current observer; LQG combines both; MPC adds explicit constraints through receding-horizon optimisation.}
+\end{ringkasan}
+
+\paragraph{Istilah kunci.} indeks kinerja kuadratik \en{(quadratic cost)}, persamaan Riccati \en{(Riccati equation)}, aturan Bryson \en{(Bryson's rule)}, filter Kalman \en{(Kalman filter)}, kovarians \en{(covariance)}, LQG, \textit{receding horizon}.
+
+\section*{Latihan}
+\begin{enumerate}
+	\item Implementasikan rekursi Riccati mundur dan tunjukkan konvergensinya ke hasil \texttt{dlqr}.
+	\item Ulangi contoh LQR dengan $Q = \text{diag}(1, 0{,}1)$. Apa efek bobot kecepatan?
+	\item Tala $Q_n$ filter Kalman untuk data posisi Modul 3 dan bandingkan estimasi kecepatan dengan tachometer.
+	\item Rancang LQG untuk motor posisi dan hitung margin fasanya.
+	\item Jelaskan mengapa MPC tanpa batasan aktif sama dengan LQR bila bobot terminalnya solusi DARE.
+\end{enumerate}

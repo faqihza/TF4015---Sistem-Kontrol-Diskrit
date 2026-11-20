@@ -1,0 +1,99 @@
+\chapter{Ruang Keadaan Diskrit}
+\label{bab:ss}
+\enchap{Discrete-Time State Space}
+
+\begin{tujuan}
+	Setelah mempelajari bab ini, Anda mampu menulis model ruang keadaan kontinu dan diskrit, mendiskritisasi model kontinu, menghitung solusi dan fungsi transfer pulsa dari ruang keadaan, menyusun bentuk kanonik, serta menguji keterkendalian dan keteramatan.
+\end{tujuan}
+
+\section{Model ruang keadaan}
+Model ruang keadaan menggambarkan variabel internal sistem, alami untuk sistem banyak masukan--banyak keluaran, dan menjadi dasar perancangan modern: penempatan kutub, pengamat, LQR, filter Kalman, dan MPC. Bentuk kontinu dan diskritnya adalah
+\begin{align}
+	\dot{\mathbf{x}} &= A\mathbf{x} + B\mathbf{u}, & \mathbf{y} &= C\mathbf{x} + D\mathbf{u},\\
+	\mathbf{x}[k+1] &= \Phi\mathbf{x}[k] + \Gamma\mathbf{u}[k], & \mathbf{y}[k] &= C\mathbf{x}[k] + D\mathbf{u}[k].
+\end{align}
+
+Untuk motor DC posisi, dari $\tau\dot\omega + \omega = Ku$ dan $\dot\theta = \omega$, pilih $\mathbf{x} = [\theta\ \ \omega]^\top$:
+\begin{equation}
+	A = \begin{bmatrix}0 & 1\\ 0 & -1/\tau\end{bmatrix},\qquad B = \begin{bmatrix}0\\ K/\tau\end{bmatrix},\qquad C = \begin{bmatrix}1 & 0\end{bmatrix}.
+\end{equation}
+Pada kit, $\theta$ diukur potensiometer dan $\omega$ diukur tachometer melalui filter. Model dua keadaan ini dipakai pada Modul 4.
+
+\section{Diskritisasi dengan ZOH}
+Solusi persamaan keadaan dari $kT$ ke $(k+1)T$ dengan $u$ konstan adalah
+\begin{equation}
+	\mathbf{x}((k+1)T) = e^{AT}\mathbf{x}(kT) + \int_0^Te^{A\eta}\,d\eta\,B\,u(kT),
+\end{equation}
+sehingga
+\begin{equation}
+	\Phi = e^{AT},\qquad \Gamma = \int_0^Te^{A\eta}\,d\eta\;B.
+\end{equation}
+Hasilnya eksak pada saat cacah, sama seperti ekuivalen ZOH fungsi transfer. Matriks eksponensial dapat dihitung dengan deret $I + AT + (AT)^2/2! + \cdots$, dengan Laplace $e^{AT} = \mathcal{L}^{-1}\{(sI-A)^{-1}\}|_{t=T}$, atau secara numerik dengan matriks diperbesar
+\begin{equation}
+	\exp\left(\begin{bmatrix}A & B\\ 0 & 0\end{bmatrix}T\right) = \begin{bmatrix}\Phi & \Gamma\\ 0 & I\end{bmatrix}.
+\end{equation}
+
+\begin{contoh}[Model diskrit motor posisi]
+	Dengan $a = e^{-T/\tau}$, hasil analitiknya
+	\[
+		\Phi = \begin{bmatrix}1 & \tau(1-a)\\ 0 & a\end{bmatrix},\qquad \Gamma = \begin{bmatrix}K\big(T - \tau(1-a)\big)\\ K(1-a)\end{bmatrix}.
+	\]
+	Untuk $T = 0{,}1$\,s:
+	\[
+		\Phi = \begin{bmatrix}1 & 0{,}09063\\ 0 & 0{,}81873\end{bmatrix},\qquad \Gamma = \begin{bmatrix}0{,}00937\\ 0{,}18127\end{bmatrix}.
+	\]
+	Nilai eigen $\Phi$ adalah 1 dan 0,8187, sama dengan kutub $G_p(z)$; baris keduanya sama dengan $G_v(z)$ plant kecepatan.
+\end{contoh}
+
+\section{Solusi dan fungsi transfer}
+Rekursi berulang memberi solusi
+\begin{equation}
+	\mathbf{x}[k] = \Phi^k\mathbf{x}[0] + \sum_{j=0}^{k-1}\Phi^{k-1-j}\Gamma u[j].
+\end{equation}
+Respons bebas ditentukan oleh nilai eigen $\Phi$: $\Phi^k \to 0$ bila semua $|\lambda_i| < 1$. Dengan kondisi awal nol, transformasi Z memberi
+\begin{equation}
+	G(z) = C(zI - \Phi)^{-1}\Gamma + D,
+\end{equation}
+dengan kutub akar $\det(zI - \Phi) = 0$. Untuk contoh motor,
+\[
+	(zI - \Phi)^{-1} = \frac{1}{(z-1)(z-a)}\begin{bmatrix}z-a & \tau(1-a)\\ 0 & z-1\end{bmatrix},\qquad
+	C(zI-\Phi)^{-1}\Gamma = \frac{0{,}009365\,z + 0{,}008762}{z^2 - 1{,}8187z + 0{,}8187},
+\]
+sama dengan $G_p(z)$ dari Bab~\ref{bab:ftpulsa}.
+
+\section{Bentuk kanonik dan transformasi similaritas}
+Untuk $G(z) = (b_1z + b_0)/(z^2 + a_1z + a_0)$, bentuk kanonik keterkendalian adalah
+\begin{equation}
+	\Phi_c = \begin{bmatrix}0 & 1\\ -a_0 & -a_1\end{bmatrix},\quad \Gamma_c = \begin{bmatrix}0\\ 1\end{bmatrix},\quad C_c = \begin{bmatrix}b_0 & b_1\end{bmatrix},
+\end{equation}
+dan bentuk kanonik keteramatan adalah $\Phi_o = \Phi_c^\top$, $\Gamma_o = C_c^\top$, $C_o = \Gamma_c^\top$. Realisasi ruang keadaan tidak unik: perubahan koordinat $\mathbf{x} = P\bar{\mathbf{x}}$ memberi $\bar\Phi = P^{-1}\Phi P$, $\bar\Gamma = P^{-1}\Gamma$, $\bar C = CP$ dengan fungsi transfer yang sama. Bentuk kanonik memudahkan perhitungan, sedangkan keadaan fisik lebih bermakna untuk implementasi.
+
+\section{Keterkendalian dan keteramatan}
+Sistem \term{terkendali}{controllable} bila setiap keadaan awal dapat dibawa ke keadaan mana pun dalam $n$ langkah, dan \term{teramati}{observable} bila keadaan awal dapat ditentukan dari $n$ pengukuran keluaran dan masukan. Uji rank-nya:
+\begin{equation}
+	W_c = \begin{bmatrix}\Gamma & \Phi\Gamma & \cdots & \Phi^{n-1}\Gamma\end{bmatrix},\qquad
+	W_o = \begin{bmatrix}C\\ C\Phi\\ \vdots\\ C\Phi^{n-1}\end{bmatrix},
+\end{equation}
+dengan syarat rank $W_c = n$ dan rank $W_o = n$. Keterkendalian diperlukan untuk menempatkan kutub sembarang, dan keteramatan diperlukan untuk pengamat keadaan.
+
+\begin{contoh}[Motor posisi]
+	$W_c = \begin{bmatrix}0{,}00937 & 0{,}02579\\ 0{,}18127 & 0{,}14841\end{bmatrix}$ dengan $\det W_c = -0{,}00329 \ne 0$, sehingga terkendali. Dengan pengukuran posisi $C = [1\ \ 0]$, $W_o = \begin{bmatrix}1 & 0\\ 1 & 0{,}09063\end{bmatrix}$ dengan determinan $0{,}0906$, sehingga teramati: kecepatan dapat diestimasi dari posisi. Dengan pengukuran kecepatan saja, $C = [0\ \ 1]$, $W_o = \begin{bmatrix}0 & 1\\ 0 & 0{,}8187\end{bmatrix}$ dengan determinan nol: posisi tidak dapat direkonstruksi dari kecepatan karena konstanta integrasinya tidak diketahui.
+\end{contoh}
+
+\paragraph{Pencacahan patologis.} Pencacahan dapat menghilangkan keterkendalian atau keteramatan. Untuk osilator $\ddot x + \omega_0^2x = u$ dengan $\omega_0 = 2\pi$ rad/s, $T = 0{,}4$\,s memberi $\det W_c = -8{,}6\times10^{-3}$ (terkendali), tetapi $T = 0{,}5$\,s (setengah periode) memberi $\Phi = -I$ dan $\det W_c = 0$. Secara umum, untuk mode osilasi $\sigma \pm j\omega_0$, keterkendalian atau keteramatan dapat hilang bila $\omega_0T = q\pi$, $q = 1, 2, \dots$, karena pencacah melihat osilasi pada fasa yang sama setiap kali.
+
+\begin{ringkasan}
+	$\Phi = e^{AT}$ dan $\Gamma = \int_0^Te^{A\eta}d\eta\,B$ eksak dengan ZOH. $G(z) = C(zI-\Phi)^{-1}\Gamma + D$ dengan kutub sama dengan nilai eigen $\Phi$. Keterkendalian dan keteramatan diuji dengan rank $W_c$ dan $W_o$. Hindari waktu cacah kelipatan setengah periode resonansi.\\[3pt]
+	\en{ZOH discretisation of state-space models is exact; the pulse transfer function follows from $C(zI-\Phi)^{-1}\Gamma$; rank tests check controllability and observability; avoid pathological sampling.}
+\end{ringkasan}
+
+\paragraph{Istilah kunci.} ruang keadaan \en{(state space)}, matriks transisi \en{(state transition matrix)}, bentuk kanonik \en{(canonical form)}, transformasi similaritas \en{(similarity transformation)}, keterkendalian \en{(controllability)}, keteramatan \en{(observability)}, pencacahan patologis \en{(pathological sampling)}.
+
+\section*{Latihan}
+\begin{enumerate}
+	\item Turunkan $\Phi$ dan $\Gamma$ motor posisi secara analitik dan cocokkan dengan angka di atas.
+	\item Tulis bentuk kanonik keterkendalian dari $G_p(z)$ dan cari matriks $P$ yang menghubungkannya ke keadaan fisik.
+	\item Periksa keterkendalian osilator teredam $\zeta = 0{,}1$, $\omega_n = 2\pi$ untuk $T = 0{,}5$\,s.
+	\item Tambahkan filter tachometer ($\tau_f = 0{,}1$\,s) sebagai keadaan ketiga, tulis $A$, $B$, $C$, lalu diskritisasi.
+	\item Tunjukkan bahwa nilai eigen $\Phi$ adalah $e^{\lambda_iT}$ dengan $\lambda_i$ nilai eigen $A$.
+\end{enumerate}

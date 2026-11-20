@@ -1,0 +1,385 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{skd}
+
+\title[Pertemuan 15 -- Isu Implementasi]{Isu Implementasi Pengontrol Digital}
+\subtitle{Implementation Issues of Digital Controllers}
+\author{Ir. Estiyanti Ekawati, M.T., Ph.D. \quad\textbar\quad Faqihza Mukhlish, S.T., M.T., Ph.D.}
+\institute{Program Studi Teknik Fisika, Fakultas Teknologi Industri, Institut Teknologi Bandung}
+\date{Pertemuan 15 \textbar\ Semester I 2026/2027}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+	\titlepage
+\end{frame}
+
+\begin{frame}{Tujuan pertemuan}
+	\framesubtitle{Learning objectives}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{enumerate}
+				\item Menganalisis pengaruh tunda komputasi dan \textit{jitter}.
+				\item Menjelaskan efek kuantisasi koefisien dan aritmetika titik tetap.
+				\item Menyusun struktur program waktu nyata yang aman.
+				\item Menerapkan alur uji dari simulasi ke perangkat keras.
+				\item Mempresentasikan hasil tugas besar.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\begin{block}{Sub-CPMK S14}
+				\small Mengevaluasi isu implementasi pengontrol digital pada mikroprosesor dan mempresentasikan hasil rancangan.\\[3pt]
+				\en{Evaluate implementation issues of digital controllers on microprocessors and present design results.}
+			\end{block}
+			{\small Bacaan: [FR] 8.4--8.5; [PH] Bab 12--13}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Pewaktuan\texorpdfstring{\\[4pt]{\Large\en{Timing}}}{ / Timing}}
+% ===========================================================================
+
+\begin{frame}{Tunda komputasi}
+	\framesubtitle{Computational delay}
+	\begin{columns}[c]
+		\begin{column}{0.55\textwidth}
+			\centering
+			\begin{tikzpicture}[xscale=1.6,yscale=0.9]
+				\draw[-{Stealth}] (0,0) -- (4.4,0) node[right,font=\scriptsize]{$t$};
+				\foreach \k in {0,1,2,3} {
+						\draw (\k*1.4,0.1) -- (\k*1.4,-0.1) node[below,font=\scriptsize]{$\k T$};
+						\fill[skdblue] (\k*1.4,0.35) circle (1.5pt);
+						\fill[skdorange!60] (\k*1.4,0.6) rectangle (\k*1.4+0.45,0.85);
+						\draw[-{Stealth},skdgreen,thick] (\k*1.4+0.45,0.6) -- (\k*1.4+0.45,0.15);
+					}
+				\node[font=\scriptsize,text=skdblue,anchor=east] at (-0.05,0.35) {baca $y$};
+				\node[font=\scriptsize,text=skdorange,anchor=east] at (-0.05,0.75) {hitung};
+				\node[font=\scriptsize,text=skdgreen,anchor=west] at (0.5,0.25) {kirim $u$};
+				\draw[decorate,decoration={brace,amplitude=3pt}] (0,0.95) -- node[above,font=\scriptsize]{$T_c$} (0.45,0.95);
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.41\textwidth}
+			\small
+			Model sebenarnya: $u$ berubah $T_c$ setelah $y$ dibaca. Pilihan:
+			\begin{enumerate}
+				\item \textbf{Kirim segera}: $T_c \ll T$, abaikan atau perlakukan sebagai tunda kecil.
+				\item \textbf{Kirim di cacah berikutnya}: tunda tetap tepat $z^{-1}$, masukkan ke model saat merancang.
+				\item \textbf{Pisah komputasi}: hitung bagian yang hanya bergantung data lama \textit{sebelum} cacah, sisakan sedikit operasi setelah membaca $y$.
+			\end{enumerate}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Dampak tunda satu cacah yang tidak dimodelkan}
+	\framesubtitle{Effect of an unmodelled one-sample delay}
+	\begin{columns}[c]
+		\begin{column}{0.56\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=8.4cm,height=5.2cm,xmin=0,xmax=4,ymin=0,ymax=1.5,xlabel={$t$ (s)},ylabel={$y$},legend style={at={(0.98,0.05)},anchor=south east}]
+					\addplot[skdgray,dashed,thin,domain=0:4,forget plot] {1};
+					\addplot[skdblue,const plot] table[x=t,y=y0] {data/p15_delay.dat};
+					\addplot[skdred,const plot] table[x=t,y=y1] {data/p15_delay.dat};
+					\legend{sesuai desain, + tunda $z^{-1}$}
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\small
+			Kompensator \textit{lead} Pertemuan 9 pada plant posisi:\\[3pt]
+			\renewcommand{\arraystretch}{1.2}
+			\begin{tabular}{@{}l c c@{}}
+				\toprule
+				 & desain & + tunda \\
+				\midrule
+				$M_p$ & 16\% & 38\% \\
+				$t_s$ & 2,1 s & 3,8 s \\
+				$|z|_{\max}$ & 0,82 & 0,90 \\
+				\bottomrule
+			\end{tabular}\\[4pt]
+			Tunda satu cacah menambah fasa $-\omega T$ (dua kali tunda ZOH). Bila $u$ dikirim di cacah berikutnya, \textbf{rancang ulang} dengan $z^{-1}G(z)$.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{\textit{Jitter} dan cara mengukurnya}
+	\framesubtitle{Jitter and how to measure it}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			\term{\textit{Jitter}}{jitter}: variasi waktu antar-cacah atau antar-keluaran. Model diskrit mengasumsikan $T$ konstan.\\[3pt]
+			Penyebab di Arduino:
+			\begin{itemize}
+				\item \texttt{Serial.print} panjang di dalam kalang
+				\item komunikasi I$^2$C (DAC) dan \texttt{analogRead} berulang
+				\item cabang program dengan durasi berbeda
+				\item \texttt{delay()} alih-alih pewaktuan \texttt{millis()}
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{block}{Praktik baik}
+				\small
+				\begin{itemize}
+					\item Ukur \texttt{DeltaTime} dan waktu eksekusi dengan \texttt{micros()} (Modul 0).
+					\item Waktu eksekusi terburuk $< 0{,}5T$.
+					\item Cetak data lebih jarang atau dalam format biner ringkas.
+					\item Untuk $T$ kecil dan presisi tinggi: \textit{timer interrupt}.
+				\end{itemize}
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Numerik\texorpdfstring{\\[4pt]{\Large\en{Numerics}}}{ / Numerics}}
+% ===========================================================================
+
+\begin{frame}{Kuantisasi koefisien}
+	\framesubtitle{Coefficient quantisation}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Filter orde 2 dengan kutub $0{,}98\,e^{\pm j0{,}05}$:
+			\[
+				z^2 + a_1z + a_2,\ \ a_1 = -1{,}957551,\ \ a_2 = 0{,}960400
+			\]
+			Koefisien dibulatkan ke $b$ bit pecahan:\\[3pt]
+			\renewcommand{\arraystretch}{1.2}
+			\begin{tabular}{@{}c c c@{}}
+				\toprule
+				Bit pecahan & $|z|$ & sudut (rad) \\
+				\midrule
+				ideal & 0,98000 & 0,0500 \\
+				8 & 0,98027 & 0,0599 \\
+				12 & 0,98003 & 0,0508 \\
+				16 & 0,98000 & 0,0500 \\
+				\bottomrule
+			\end{tabular}\\[3pt]
+			Dengan 8 bit, frekuensi osilasi bergeser 20\%.
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{alertblock}{Mengapa peka?}
+				\small
+				Kutub dekat $z=1$ (karena $T$ kecil dibanding dinamika) membuat koefisien hampir saling meniadakan; galat kecil pada $a_i$ menggeser akar jauh.
+			\end{alertblock}
+			\small
+			\textbf{Mitigasi}
+			\begin{itemize}
+				\item Realisasi kaskade/paralel orde 1--2, bukan bentuk langsung orde tinggi.
+				\item Bentuk ruang keadaan atau operator delta $\delta = (z-1)/T$.
+				\item Jangan memilih $T$ jauh lebih kecil dari perlu.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Titik tetap vs titik mengambang}
+	\framesubtitle{Fixed point vs floating point}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			\begin{itemize}
+				\item ATmega328P (Arduino UNO) tidak punya unit \textit{floating-point}: \texttt{float} diemulasi perangkat lunak, jauh lebih lambat daripada operasi bilangan bulat. Ukur dengan \texttt{micros()}.
+				\item Titik tetap (format Q): bilangan bulat dengan skala $2^{-b}$. Cepat, tetapi rentang terbatas: waspadai \textit{overflow}, gunakan aritmetika jenuh.
+				\item \texttt{float} AVR = \texttt{double} 32-bit: sekitar 7 digit desimal.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{exampleblock}{Contoh: $a = e^{-T/\tau}$ dalam Q8}
+				\scriptsize
+				\renewcommand{\arraystretch}{1.2}
+				\begin{tabular}{@{}c c c c@{}}
+					\toprule
+					$T$ (s) & $a$ & $a_{Q8}$ & $\tau$ efektif \\
+					\midrule
+					0,1 & 0,818731 & 0,820313 & 0,505 s \\
+					0,01 & 0,980199 & 0,980469 & 0,507 s \\
+					0,001 & 0,998002 & 0,996094 & 0,255 s \\
+					\bottomrule
+				\end{tabular}\\[3pt]
+				\small Dengan $T$ sangat kecil, 8 bit pecahan membuat model kehilangan separuh konstanta waktunya.
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Praktik Implementasi\texorpdfstring{\\[4pt]{\Large\en{Implementation Practice}}}{ / Implementation Practice}}
+% ===========================================================================
+
+\begin{frame}[fragile]{Struktur program waktu nyata}
+	\framesubtitle{Real-time program structure}
+	\begin{columns}[T]
+		\begin{column}{0.54\textwidth}
+			\begin{block}{}
+				\scriptsize
+\begin{verbatim}
+void loop() {
+  baca_perintah_serial();          // non-blocking
+  unsigned long now = micros();
+  if (now - last >= T_US) {
+    last += T_US;                  // tanpa drift
+    float y = baca_sensor();       // 1. ukur
+    float u = kontroler(r, y);     // 2. hitung
+    u = batasi(u);                 // 3. saturasi
+    run_motor(kompensasi(u));      // 4. kirim
+    update_keadaan(u);             // 5. pengamat, AW
+    if (++n % 5 == 0) log_data();  // 6. catat jarang
+  }
+}
+\end{verbatim}
+			\end{block}
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\small
+			\begin{itemize}
+				\item Urutan: ukur $\rightarrow$ hitung $\rightarrow$ kirim, lalu pekerjaan lain.
+				\item \texttt{last += T\_US} menjaga rata-rata periode tepat $T$.
+				\item Keselamatan: batas $u$, deteksi sensor di luar rentang, perintah berhenti darurat.
+				\item Inisialisasi semua keadaan (integrator, pengamat) di \texttt{setup()} dan saat berganti mode.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Nonlinieritas yang harus ditangani}
+	\framesubtitle{Nonlinearities to handle}
+	\begin{columns}[T]
+		\begin{column}{0.32\textwidth}
+			\begin{block}{Saturasi}
+				\small
+				Batasi $u$ dan $\Delta u$; \textit{anti-windup} pada integrator dan pengamat (pakai $u$ setelah saturasi).
+			\end{block}
+		\end{column}
+		\begin{column}{0.32\textwidth}
+			\begin{block}{\textit{Deadzone} dan gesekan}
+				\small
+				Kompensasi invers \textit{deadzone} (Modul 1) agar plant mendekati linier di sekitar nol.
+			\end{block}
+		\end{column}
+		\begin{column}{0.32\textwidth}
+			\begin{block}{Sensor}
+				\small
+				Filter anti-alias, kalibrasi, satuan konsisten; perhatikan potensiometer yang ``melompat'' $100\% \leftrightarrow 0\%$.
+			\end{block}
+		\end{column}
+	\end{columns}
+	\vspace{0.3cm}
+	\kunci{Rancangan linier mengasumsikan semua ini sudah ditangani. Sebagian besar kegagalan implementasi berasal dari sini, bukan dari teori kontrolnya.}
+\end{frame}
+
+\begin{frame}{Alur uji: dari simulasi ke perangkat keras}
+	\framesubtitle{Test workflow: from simulation to hardware}
+	\centering
+	\begin{tikzpicture}[node distance=0.35cm and 0.45cm]
+		\node[blk,text width=2.1cm] (a) {1. Simulasi model\\(MATLAB/Python)};
+		\node[blk,text width=2.1cm,right=of a] (b) {2. Simulasi kode\\kontroler yang sama};
+		\node[blk,text width=2.1cm,right=of b] (c) {3. Kit tanpa daya motor\\(cek \textit{Serial Monitor})};
+		\node[blk,text width=2.1cm,right=of c] (d) {4. Kit, penguatan kecil, \textit{setpoint} kecil};
+		\node[blkd,text width=2.1cm,right=of d] (e) {5. Uji penuh + gangguan, catat data};
+		\draw[sig] (a) -- (b); \draw[sig] (b) -- (c); \draw[sig] (c) -- (d); \draw[sig] (d) -- (e);
+	\end{tikzpicture}
+
+	\vspace{0.4cm}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\small
+			\begin{itemize}
+				\item Langkah 2 menangkap kesalahan satuan, tanda, dan urutan operasi sebelum menyentuh motor.
+				\item Langkah 3 adalah SOP Modul 0: lepas transistor atau jangan sambungkan 220\,V.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\small
+			\begin{itemize}
+				\item Bandingkan data kit dengan simulasi pada \textbf{grafik yang sama}.
+				\item Bila berbeda jauh: periksa model (identifikasi ulang), tunda, saturasi, \textit{deadzone}.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Presentasi Tugas Besar dan Rangkuman\texorpdfstring{\\[4pt]{\Large\en{Project Presentations and Course Recap}}}{ / Project Presentations and Course Recap}}
+% ===========================================================================
+
+\begin{frame}{Struktur presentasi tugas besar}
+	\framesubtitle{Project presentation structure}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			\textbf{10 menit presentasi + 5 menit tanya jawab}
+			\begin{enumerate}
+				\item Tujuan dan spesifikasi kinerja (1 slide)
+				\item Model dan identifikasi sistem
+				\item Metode kontrol: teori singkat dan diagram blok
+				\item Perancangan dan simulasi
+				\item Implementasi pada kit: hasil, grafik, metrik
+				\item Perbandingan dengan PID (Modul 2/3)
+				\item Kesimpulan dan pelajaran
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{block}{Kriteria penilaian}
+				\small
+				\renewcommand{\arraystretch}{1.15}
+				\begin{tabular}{@{}l r@{}}
+					Kelengkapan dokumen & 30\% \\
+					Pemahaman sistem \& metode & 30\% \\
+					Hasil pengontrolan & 10\% \\
+					Presentasi & 30\% \\
+					Bonus (kreativitas, demo, uji gangguan) & +15\% \\
+				\end{tabular}
+			\end{block}
+			{\small Dokumen (program, data, laporan) dikumpulkan sebelum UAS.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Peta metode semester ini}
+	\framesubtitle{Map of this semester's methods}
+	\centering
+	\small
+	\renewcommand{\arraystretch}{1.35}
+	\begin{tabular}{@{}l l l l@{}}
+		\toprule
+		 & \textbf{Model} & \textbf{Metode} & \textbf{Kapan dipakai} \\
+		\midrule
+		Heuristik & FOPDT dari data & PID + ZN/Cohen--Coon ($\theta + T/2$) & cepat, model kasar \\
+		Emulasi & $G(s)$ & Tustin/MPZ dari $C(s)$ & $T$ kecil, intuisi kontinu \\
+		Langsung $z$ & $G(z)$ (ZOH) & \textit{root locus}, bidang $w$ & $T$ sedang, SISO \\
+		Langsung $z$ & $G(z)$ & Ragazzini, \textit{deadbeat}, Dahlin & proses lambat, $T$ besar \\
+		Ruang keadaan & $\Phi, \Gamma, C$ & penempatan kutub + pengamat & keadaan internal penting \\
+		Optimal & $\Phi, \Gamma$ + derau & LQR, Kalman, LQG, MPC & kompromi, banyak masukan, batasan \\
+		\bottomrule
+	\end{tabular}
+
+	\vspace{0.3cm}
+	\kunci{Semua metode bermuara pada persamaan beda yang dijalankan tiap $T$ detik di mikroprosesor.}
+\end{frame}
+
+\begin{frame}{Ringkasan dan persiapan UAS}
+	\framesubtitle{Summary and final exam preparation}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Ringkasan}
+				\small
+				\begin{itemize}
+					\item Tunda komputasi: kirim segera atau modelkan sebagai $z^{-1}$.
+					\item Jaga $T$ tetap; ukur \textit{jitter}.
+					\item Koefisien dekat $z=1$ peka kuantisasi; gunakan realisasi orde rendah.
+					\item Uji bertahap; tangani saturasi, \textit{deadzone}, dan sensor.
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{Cakupan UAS}
+				\small
+				Pertemuan 1--15, dengan penekanan pada Pertemuan 9--15: \textit{root locus} bidang $z$, respons frekuensi dan \textit{deadbeat}, ruang keadaan, penempatan kutub, pengamat, LQR/Kalman, dan isu implementasi.
+			\end{exampleblock}
+			{\small Latihan: ulangi contoh-contoh slide dengan $T = 0{,}05$\,s dan bandingkan hasilnya.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\end{document}

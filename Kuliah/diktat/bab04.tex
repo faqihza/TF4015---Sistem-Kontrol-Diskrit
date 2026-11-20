@@ -1,0 +1,121 @@
+\chapter{Fungsi Transfer Pulsa dan Identifikasi Model}
+\label{bab:ftpulsa}
+\enchap{Pulse Transfer Function and Model Identification}
+
+\begin{tujuan}
+	Setelah mempelajari bab ini, Anda mampu menurunkan fungsi transfer pulsa sistem tercacah dengan ZOH, menyusun fungsi transfer pulsa kalang tertutup, serta mengidentifikasi model FOPDT dan model ARX dari data dan memvalidasinya.
+\end{tujuan}
+
+\section{Fungsi transfer pulsa}
+Untuk sistem linier dengan masukan dan keluaran tercacah, \term{fungsi transfer pulsa}{pulse transfer function} didefinisikan sebagai
+\begin{equation}
+	G(z) = \frac{Y(z)}{U(z)}\Big|_{\text{KA nol}} = \mathcal{Z}\{g[k]\},
+\end{equation}
+dengan $g[k]$ respons impuls diskrit. Keluaran adalah konvolusi diskrit $y[k] = \sum_{j=0}^{k}g[j]u[k-j]$, yang di domain $z$ menjadi perkalian $Y(z) = G(z)U(z)$.
+
+\paragraph{Letak pencacah.} Dalam diagram blok sistem tercacah, hasil reduksi bergantung pada letak pencacah. Bila ada pencacah di antara dua blok, $Y(z)/U(z) = G_1(z)G_2(z)$. Bila tidak ada, kedua blok harus ditransformasikan bersama: $Y(z)/U(z) = \overline{G_1G_2}(z) = \mathcal{Z}\{G_1(s)G_2(s)\}$. Secara umum $\overline{G_1G_2}(z) \neq G_1(z)G_2(z)$. Misalnya untuk $G_1 = G_2 = 1/(s+1)$, $G_1(z)G_2(z) = z^2/(z-e^{-T})^2$ sedangkan $\overline{G_1G_2}(z) = Te^{-T}z/(z-e^{-T})^2$.
+
+\section{Ekuivalen ZOH}
+Karena ZOH dan plant tidak dipisahkan pencacah, keduanya ditransformasikan bersama:
+\begin{equation}
+	G(z) = \mathcal{Z}\left\{\frac{1-e^{-sT}}{s}G(s)\right\} = (1-z^{-1})\,\mathcal{Z}\left\{\frac{G(s)}{s}\right\}.
+	\label{eq:b4-zoh}
+\end{equation}
+Persamaan~\eqref{eq:b4-zoh} memberi nilai \emph{eksak} keluaran plant pada saat cacah untuk masukan yang konstan sepotong-sepotong; tidak ada aproksimasi. Langkah praktisnya: (1) hitung $G(s)/s$; (2) uraikan dalam pecahan parsial; (3) ganti setiap suku dengan transformasi Z-nya; (4) kalikan dengan $(z-1)/z$. Di MATLAB atau Python, perintahnya \texttt{c2d(G,T,'zoh')}.
+
+\begin{contoh}[Plant kecepatan motor]
+	Untuk $G_v(s) = K/(\tau s+1)$,
+	\[
+		\frac{G_v(s)}{s} = K\left[\frac1s - \frac{1}{s+1/\tau}\right]
+		\ \Rightarrow\
+		\mathcal{Z}\Big\{\frac{G_v}{s}\Big\} = K\left[\frac{z}{z-1} - \frac{z}{z-a}\right],\quad a = e^{-T/\tau}.
+	\]
+	Mengalikan dengan $(z-1)/z$:
+	\[
+		G_v(z) = \frac{K(1-a)}{z-a}.
+	\]
+	Dengan $K=1$, $\tau=0{,}5$\,s, $T=0{,}1$\,s: $a = e^{-0{,}2} = 0{,}8187$, $b = 1-a = 0{,}1813$, sehingga $G_v(z) = 0{,}1813/(z-0{,}8187)$. Bandingkan dengan aproksimasi Euler $0{,}2/(z-0{,}8)$. Kutub kontinu $s = -1/\tau$ dipetakan ke $z = e^{-T/\tau}$.
+\end{contoh}
+
+\begin{contoh}[Plant posisi motor]
+	Untuk $G_p(s) = K/(s(\tau s+1))$,
+	\[
+		\frac{G_p(s)}{s} = K\left[\frac{1}{s^2} - \frac{\tau}{s} + \frac{\tau}{s+1/\tau}\right].
+	\]
+	Dengan tabel dan perkalian $(z-1)/z$ diperoleh
+	\[
+		G_p(z) = \frac{b_1z + b_0}{(z-1)(z-a)},\qquad b_1 = K(T - \tau + \tau a),\quad b_0 = K(\tau - \tau a - aT).
+	\]
+	Angka acuan: $G_p(z) = \dfrac{0{,}009365\,z + 0{,}008762}{(z-1)(z-0{,}8187)}$, dengan kutub $z = 1$ (integrator) dan $z = 0{,}8187$, serta zero $z = -0{,}9356$. Zero ini tidak ada pada $G_p(s)$; ia muncul akibat pencacahan dan disebut \term{\textit{sampling zero}}{sampling zero}. Zero di dekat $z = -1$ ini penting untuk perancangan \textit{deadbeat} (Bab~\ref{bab:frek}).
+\end{contoh}
+
+Beberapa pasangan berguna: integrator $K/s$ menjadi $KT/(z-1)$, dan tunda murni $e^{-\theta s}$ dengan $\theta = dT$ menjadi $z^{-d}$. Tunda yang bukan kelipatan $T$ ditangani dengan transformasi Z termodifikasi [OG 3.5].
+
+\section{Kalang tertutup}
+Untuk umpan balik satuan dengan kontroler diskrit $D(z)$ dan plant tercacah $G(z)$,
+\begin{equation}
+	\frac{Y(z)}{R(z)} = \frac{D(z)G(z)}{1 + D(z)G(z)},
+\end{equation}
+dengan persamaan karakteristik $1 + D(z)G(z) = 0$. Bila sensor $H(s)$ juga kontinu tanpa pencacah di antara plant dan sensor, gunakan $\overline{GH}(z)$ pada penyebut.
+
+\section{Identifikasi model dari data}
+Parameter fisik jarang diketahui akurat, sedangkan model dari data otomatis mencakup sensor, filter, driver, dan aktuator. Alur identifikasi adalah: merancang eksperimen, mengambil data, memilih struktur model, mengestimasi parameter, lalu memvalidasi. Pada kit (Modul 1), \textit{deadzone} motor dikompensasi lebih dahulu, perubahan tangga diberikan di sekitar titik operasi, dan kecepatan direkam dengan waktu cacah tetap. Filter tachometer ($\tau_f = 0{,}1$\,s) ikut teridentifikasi sebagai bagian dari plant.
+
+\subsection{Model FOPDT dari respons tangga}
+Untuk respons tangga berbentuk sigmoid, model FOPDT $Ke^{-\theta s}/(\tau s+1)$ dapat diperoleh dengan \textbf{metode dua titik} (Smith). Catat waktu ketika respons mencapai 28,3\% dan 63,2\% dari perubahan akhir, $t_{28}$ dan $t_{63}$, lalu
+\begin{equation}
+	K = \frac{\Delta y_\infty}{\Delta u},\qquad \tau = 1{,}5\,(t_{63} - t_{28}),\qquad \theta = t_{63} - \tau.
+\end{equation}
+
+\begin{contoh}[Metode dua titik]
+	Untuk respons plant $2e^{-0{,}3s}/(1{,}5s+1)$, $t_{28} = 0{,}799$\,s dan $t_{63} = 1{,}800$\,s, sehingga $\tau = 1{,}5(1{,}001) = 1{,}501$\,s dan $\theta = 0{,}299$\,s. Nilai sebenarnya 1,5\,s dan 0,3\,s. Metode garis singgung Ziegler--Nichols lebih peka terhadap derau karena bergantung pada kemiringan.
+\end{contoh}
+
+\subsection{Model ARX dan kuadrat terkecil}
+Untuk plant kecepatan, struktur model yang sesuai dengan ekuivalen ZOH adalah ARX orde satu
+\begin{equation}
+	y[k] = a\,y[k-1] + b\,u[k-1] + e[k].
+\end{equation}
+Dengan $N$ data, persamaan disusun sebagai $\mathbf{Y} = \boldsymbol\Phi\boldsymbol\theta + \mathbf{e}$, dengan baris ke-$k$ dari $\boldsymbol\Phi$ adalah $[y[k-1]\ \ u[k-1]]$ dan $\boldsymbol\theta = [a\ \ b]^\top$. Meminimalkan $J = \|\mathbf{Y} - \boldsymbol\Phi\boldsymbol\theta\|^2$ memberi persamaan normal
+\begin{equation}
+	\hat{\boldsymbol\theta} = (\boldsymbol\Phi^\top\boldsymbol\Phi)^{-1}\boldsymbol\Phi^\top\mathbf{Y}.
+\end{equation}
+Parameter kontinu diperoleh dari $\hat\tau = -T/\ln\hat a$ dan $\hat K = \hat b/(1-\hat a)$.
+
+\begin{contoh}[Identifikasi ARX]
+	Data sintetis dari plant acuan dengan derau pengukuran $\sigma = 0{,}02$, 120 sampel, dan masukan berupa enam tingkat berbeda (Gambar~\ref{fig:b4-arx}). Estimasi kuadrat terkecil memberi $\hat a = 0{,}8217$ dan $\hat b = 0{,}1787$ (nilai benar 0,8187 dan 0,1813), sehingga $\hat\tau = 0{,}509$\,s dan $\hat K = 1{,}002$. Kecocokan simulasi model terhadap data, $\textit{fit} = 100\big(1 - \|y-\hat y\|/\|y-\bar y\|\big)$, adalah 92,3\%.
+\end{contoh}
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}
+		\begin{axis}[skd,width=12cm,height=5.4cm,xmin=0,xmax=12,ymin=-0.1,ymax=1.15,xlabel={$t$ (s)},legend style={at={(0.5,1.02)},anchor=south},legend columns=3]
+			\addplot[skdgray,const plot,thin] table[x=t,y=u] {\dat{p4_arx.dat}};
+			\addplot[skdblue,only marks,mark=*,mark size=0.8pt] table[x=t,y=ym] {\dat{p4_arx.dat}};
+			\addplot[skdorange] table[x=t,y=yh] {\dat{p4_arx.dat}};
+			\legend{masukan $u$, data terukur, simulasi model ARX}
+		\end{axis}
+	\end{tikzpicture}
+	\caption{Identifikasi ARX orde satu}
+	\label{fig:b4-arx}
+\end{figure}
+
+\subsection{Validasi}
+Model harus diuji pada data yang tidak dipakai untuk estimasi, dengan simulasi bebas (bukan prediksi satu langkah). Residu sebaiknya acak dan tidak berkorelasi dengan masukan, dan parameter dibandingkan di beberapa titik operasi. Jebakan umum adalah masukan yang kurang ``kaya'' (hanya satu tangga), nonlinieritas seperti \textit{deadzone} dan saturasi yang membuat model hanya berlaku lokal, derau berwarna yang membuat estimasi kuadrat terkecil bias, dan waktu cacah yang jauh lebih kecil dari $\tau$ sehingga $\hat a$ sangat dekat 1 dan peka derau.
+
+\begin{ringkasan}
+	$G(z) = (1-z^{-1})\mathcal{Z}\{G(s)/s\}$ eksak pada saat cacah. Kutub $s = p$ menjadi $z = e^{pT}$ dan zero baru dapat muncul. Kalang tertutup: $DG/(1+DG)$. Model dari data diperoleh dengan metode grafis (FOPDT) atau kuadrat terkecil (ARX), dan selalu divalidasi.\\[3pt]
+	\en{The ZOH equivalent is exact at sampling instants; sampling maps poles by $z = e^{pT}$ and may introduce sampling zeros. Empirical models from step tests or least-squares ARX fitting must always be validated.}
+\end{ringkasan}
+
+\paragraph{Istilah kunci.} fungsi transfer pulsa \en{(pulse transfer function)}, ekuivalen ZOH \en{(ZOH equivalent)}, \textit{sampling zero}, identifikasi sistem \en{(system identification)}, kuadrat terkecil \en{(least squares)}, validasi \en{(validation)}.
+
+\section*{Latihan}
+\begin{enumerate}
+	\item Turunkan $G_p(z)$ untuk $G_p(s) = K/(s(\tau s+1))$ dan periksa angka acuan.
+	\item Tentukan ekuivalen ZOH dari $\dfrac{2}{(s+1)(s+3)}$ dengan $T = 0{,}2$\,s.
+	\item Buktikan $\overline{G_1G_2}(z) \neq G_1(z)G_2(z)$ untuk $G_1 = G_2 = 1/(s+1)$.
+	\item Tentukan ekuivalen ZOH dari $e^{-0{,}2s}/(0{,}5s+1)$ dengan $T = 0{,}1$\,s.
+	\item Dengan data Modul 1, estimasi model ARX orde satu, laporkan $K$, $\tau$, dan \textit{fit}, lalu validasi dengan data lain.
+	\item Mengapa estimasi $\hat a$ menjadi peka derau bila $T \ll \tau$?
+\end{enumerate}

@@ -1,0 +1,339 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{skd}
+
+\title[Pertemuan 11 -- Ruang Keadaan Diskrit]{Ruang Keadaan Diskrit}
+\subtitle{Discrete-Time State Space}
+\author{Ir. Estiyanti Ekawati, M.T., Ph.D. \quad\textbar\quad Faqihza Mukhlish, S.T., M.T., Ph.D.}
+\institute{Program Studi Teknik Fisika, Fakultas Teknologi Industri, Institut Teknologi Bandung}
+\date{Pertemuan 11 \textbar\ Semester I 2026/2027}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+	\titlepage
+\end{frame}
+
+\begin{frame}{Tujuan pertemuan}
+	\framesubtitle{Learning objectives}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{enumerate}
+				\item Menulis model ruang keadaan kontinu dan diskrit.
+				\item Mendiskritisasi model kontinu: $\Phi = e^{AT}$, $\Gamma$.
+				\item Menghitung solusi persamaan keadaan dan fungsi transfer pulsa dari ruang keadaan.
+				\item Menyusun bentuk kanonik dari fungsi transfer.
+				\item Menguji keterkendalian dan keteramatan, termasuk pengaruh pencacahan.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\begin{block}{Sub-CPMK S10}
+				\small Memodelkan sistem dalam ruang keadaan diskrit dan menganalisis keterkendalian dan keteramatan.\\[3pt]
+				\en{Model systems in discrete state space and analyse controllability and observability.}
+			\end{block}
+			{\small Bacaan: [OG] Bab 5; [PH] 2.10, Bab 9; [FR] 7.2, 8.7}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Model Ruang Keadaan\texorpdfstring{\\[4pt]{\Large\en{State-Space Models}}}{ / State-Space Models}}
+% ===========================================================================
+
+\begin{frame}{Mengapa ruang keadaan?}
+	\framesubtitle{Why state space?}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\begin{itemize}
+				\item Menggambarkan \textbf{variabel internal} (posisi, kecepatan, arus), bukan hanya masukan--keluaran.
+				\item Alami untuk sistem banyak masukan--banyak keluaran.
+				\item Dasar perancangan modern: penempatan kutub, pengamat, LQR, filter Kalman, MPC (Pertemuan 12--14, tugas besar).
+				\item Cocok untuk komputasi numerik dan simulasi.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{block}{Bentuk umum}
+				\small
+				Kontinu:
+				\[
+					\dot{\mathbf{x}} = A\mathbf{x} + B\mathbf{u},\quad \mathbf{y} = C\mathbf{x} + D\mathbf{u}
+				\]
+				Diskrit:
+				\begin{align*}
+					\mathbf{x}[k+1] &= \Phi\mathbf{x}[k] + \Gamma\mathbf{u}[k]\\
+					\mathbf{y}[k] &= C\mathbf{x}[k] + D\mathbf{u}[k]
+				\end{align*}
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Model motor DC (posisi)}
+	\framesubtitle{DC motor model (position)}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			Dari $\tau\dot\omega + \omega = Ku$ dan $\dot\theta = \omega$, pilih $\mathbf{x} = [\theta\ \ \omega]^\top$:
+			\[
+				\dot{\mathbf{x}} = \underbrace{\begin{bmatrix} 0 & 1\\ 0 & -1/\tau\end{bmatrix}}_{A}\mathbf{x} + \underbrace{\begin{bmatrix} 0\\ K/\tau\end{bmatrix}}_{B}u
+			\]
+			\[
+				y = \underbrace{\begin{bmatrix} 1 & 0\end{bmatrix}}_{C}\mathbf{x}
+			\]
+			Dengan $K=1$, $\tau=0{,}5$\,s: $A = \begin{bmatrix} 0&1\\0&-2\end{bmatrix}$, $B = \begin{bmatrix}0\\2\end{bmatrix}$.
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\centering
+			\begin{tikzpicture}[node distance=0.5cm]
+				\node (u) {$u$};
+				\node[blk,right=of u,minimum width=1.4cm] (g) {$\dfrac{K}{\tau s+1}$};
+				\node[blk,right=0.8cm of g,minimum width=1cm] (i) {$\dfrac{1}{s}$};
+				\node[right=0.6cm of i] (y) {$\theta$};
+				\draw[sig] (u) -- (g); \draw[sig] (g) -- node[above,lbl]{$\omega$} (i); \draw[sig] (i) -- (y);
+			\end{tikzpicture}\\[6pt]
+			\small Pada kit: $\theta$ diukur potensiometer, $\omega$ diukur tachometer (dengan filter). Model 2 keadaan ini dipakai di Modul 4.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Diskritisasi dan Solusi\texorpdfstring{\\[4pt]{\Large\en{Discretisation and Solution}}}{ / Discretisation and Solution}}
+% ===========================================================================
+
+\begin{frame}{Diskritisasi dengan ZOH}
+	\framesubtitle{ZOH discretisation}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Solusi persamaan keadaan dari $kT$ ke $(k+1)T$ dengan $u$ konstan (ZOH):
+			\[
+				\mathbf{x}((k+1)T) = e^{AT}\mathbf{x}(kT) + \int_0^T e^{A\eta}\,d\eta\,B\,u(kT)
+			\]
+			\begin{block}{}
+				\[
+					\Phi = e^{AT},\qquad \Gamma = \int_0^T e^{A\eta}\,d\eta\;B
+				\]
+			\end{block}
+			Eksak pada saat cacah, sama seperti ekuivalen ZOH fungsi transfer.
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\small
+			\textbf{Cara menghitung}
+			\begin{enumerate}
+				\item Deret: $e^{AT} = I + AT + \frac{(AT)^2}{2!} + \cdots$
+				\item Laplace: $e^{AT} = \mathcal{L}^{-1}\{(sI-A)^{-1}\}\big|_{t=T}$
+				\item Matriks diperbesar (numerik):
+				\[
+					\exp\!\left(\begin{bmatrix} A & B\\ 0 & 0\end{bmatrix}T\right) = \begin{bmatrix}\Phi & \Gamma\\ 0 & I\end{bmatrix}
+				\]
+			\end{enumerate}
+			{\scriptsize MATLAB/Python: \texttt{c2d(ss(A,B,C,D),T)}}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Contoh: model diskrit motor posisi}
+	\framesubtitle{Example: discrete motor position model}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Dengan $a = e^{-T/\tau}$, hasil analitik:
+			\[
+				\Phi = \begin{bmatrix} 1 & \tau(1-a)\\ 0 & a\end{bmatrix},\quad
+				\Gamma = \begin{bmatrix} K\big(T - \tau(1-a)\big)\\ K(1-a)\end{bmatrix}
+			\]
+			$T = 0{,}1$\,s:
+			\[
+				\Phi = \begin{bmatrix} 1 & 0{,}09063\\ 0 & 0{,}81873\end{bmatrix},\quad
+				\Gamma = \begin{bmatrix} 0{,}00937\\ 0{,}18127\end{bmatrix}
+			\]
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{block}{Persamaan beda yang dieksekusi}
+				\small
+				$\theta[k+1] = \theta[k] + 0{,}09063\,\omega[k] + 0{,}00937\,u[k]$\\
+				$\omega[k+1] = 0{,}81873\,\omega[k] + 0{,}18127\,u[k]$
+			\end{block}
+			\small
+			Nilai eigen $\Phi$: $1$ dan $0{,}8187$ = kutub $G_p(z)$.\\[3pt]
+			Baris kedua sama dengan $G_v(z)$ plant kecepatan (Pertemuan 4).
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Solusi dan fungsi transfer pulsa}
+	\framesubtitle{Solution and pulse transfer function}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			\textbf{Solusi} (rekursi berulang):
+			\[
+				\mathbf{x}[k] = \Phi^k\mathbf{x}[0] + \sum_{j=0}^{k-1}\Phi^{k-1-j}\,\Gamma\,u[j]
+			\]
+			Respons bebas ditentukan oleh nilai eigen $\Phi$: $\Phi^k \to 0$ bila semua $|\lambda_i| < 1$.\\[4pt]
+			\textbf{Fungsi transfer} (KA nol):
+			\[
+				G(z) = C(zI - \Phi)^{-1}\Gamma + D
+			\]
+			Kutub $G(z)$ = akar $\det(zI-\Phi) = 0$.
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{exampleblock}{Cek}
+				\small
+				\[
+					(zI-\Phi)^{-1} = \frac{1}{(z-1)(z-a)}\begin{bmatrix} z-a & \tau(1-a)\\ 0 & z-1\end{bmatrix}
+				\]
+				\[
+					C(zI-\Phi)^{-1}\Gamma = \frac{0{,}009365\,z + 0{,}008762}{z^2 - 1{,}8187z + 0{,}8187}
+				\]
+				Sama dengan $G_p(z)$ dari ekuivalen ZOH. \checkmark
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Bentuk kanonik}
+	\framesubtitle{Canonical forms}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			$G(z) = \dfrac{b_1z + b_0}{z^2 + a_1z + a_0}$\\[4pt]
+			\textbf{Kanonik keterkendalian}:
+			\[
+				\Phi_c = \begin{bmatrix} 0 & 1\\ -a_0 & -a_1\end{bmatrix},\ \Gamma_c = \begin{bmatrix}0\\1\end{bmatrix},\ C_c = \begin{bmatrix} b_0 & b_1\end{bmatrix}
+			\]
+			\textbf{Kanonik keteramatan}:
+			\[
+				\Phi_o = \Phi_c^\top,\quad \Gamma_o = C_c^\top,\quad C_o = \Gamma_c^\top
+			\]
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\small
+			\begin{itemize}
+				\item Realisasi ruang keadaan \textbf{tidak unik}: $\mathbf{x} = P\bar{\mathbf{x}}$ memberi $\bar\Phi = P^{-1}\Phi P$, $\bar\Gamma = P^{-1}\Gamma$, $\bar C = CP$, dengan fungsi transfer sama.
+				\item Bentuk kanonik keterkendalian memudahkan penempatan kutub (Pertemuan 12).
+				\item Keadaan fisik ($\theta$, $\omega$) lebih bermakna untuk implementasi dan pengukuran.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Keterkendalian dan Keteramatan\texorpdfstring{\\[4pt]{\Large\en{Controllability and Observability}}}{ / Controllability and Observability}}
+% ===========================================================================
+
+\begin{frame}{Definisi dan uji rank}
+	\framesubtitle{Definitions and rank tests}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Keterkendalian}
+				\small
+				Setiap keadaan awal dapat dibawa ke keadaan mana pun dalam $n$ langkah.
+				\[
+					W_c = \begin{bmatrix}\Gamma & \Phi\Gamma & \cdots & \Phi^{n-1}\Gamma\end{bmatrix}
+				\]
+				Terkendali $\iff$ rank $W_c = n$.
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Keteramatan}
+				\small
+				Keadaan awal dapat ditentukan dari $n$ pengukuran $y$ dan masukan $u$.
+				\[
+					W_o = \begin{bmatrix} C\\ C\Phi\\ \vdots\\ C\Phi^{n-1}\end{bmatrix}
+				\]
+				Teramati $\iff$ rank $W_o = n$.
+			\end{block}
+		\end{column}
+	\end{columns}
+	\vspace{0.2cm}
+	\kunci{Keterkendalian diperlukan untuk penempatan kutub sembarang; keteramatan diperlukan untuk pengamat keadaan.}
+\end{frame}
+
+\begin{frame}{Contoh motor posisi}
+	\framesubtitle{Motor position example}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\small
+			\[
+				W_c = \begin{bmatrix} 0{,}00937 & 0{,}02579\\ 0{,}18127 & 0{,}14841\end{bmatrix},\ \det W_c = -0{,}00329
+			\]
+			Terkendali. \checkmark\\[6pt]
+			Mengukur posisi, $C = [1\ \ 0]$:
+			\[
+				W_o = \begin{bmatrix} 1 & 0\\ 1 & 0{,}09063\end{bmatrix},\ \det W_o = 0{,}0906
+			\]
+			Teramati: kecepatan dapat diestimasi dari posisi. \checkmark
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\small
+			Mengukur kecepatan saja, $C = [0\ \ 1]$:
+			\[
+				W_o = \begin{bmatrix} 0 & 1\\ 0 & 0{,}8187\end{bmatrix},\ \det W_o = 0
+			\]
+			\alert{Tidak teramati}: posisi tidak dapat direkonstruksi dari kecepatan (konstanta integrasi tidak diketahui).
+			\begin{block}{Implikasi kit}
+				\scriptsize Untuk kontrol posisi berbasis keadaan, gunakan potensiometer sebagai pengukuran utama; kecepatan dapat diukur atau diestimasi.
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Pencacahan dapat menghilangkan keterkendalian}
+	\framesubtitle{Sampling can destroy controllability}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			Osilator tak teredam $\ddot x + \omega_0^2x = u$, $\omega_0 = 2\pi$ rad/s (periode 1\,s).\\[4pt]
+			$T = 0{,}4$\,s: $\det W_c = -8{,}6\times10^{-3}$, terkendali.\\[4pt]
+			$T = 0{,}5$\,s (setengah periode):
+			\[
+				\Phi = \begin{bmatrix} -1 & 0\\ 0 & -1\end{bmatrix},\quad \det W_c = 0
+			\]
+			\alert{Tidak terkendali}.
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{alertblock}{\textit{Pathological sampling}}
+				\small
+				Untuk mode osilasi $\lambda = \sigma \pm j\omega_0$, keterkendalian/keteramatan dapat hilang bila
+				\[
+					\omega_0T = q\pi,\quad q = 1, 2, \dots
+				\]
+				Pencacah ``melihat'' osilasi pada fasa yang sama setiap kali sehingga informasinya hilang.
+			\end{alertblock}
+			{\small Hindari $T$ yang merupakan kelipatan setengah periode resonansi plant.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Ringkasan, latihan, dan tugas besar}
+	\framesubtitle{Summary, exercises, and course project}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Ringkasan}
+				\small
+				\begin{itemize}
+					\item $\Phi = e^{AT}$, $\Gamma = \int_0^Te^{A\eta}d\eta\,B$ (eksak dengan ZOH).
+					\item $G(z) = C(zI-\Phi)^{-1}\Gamma + D$; kutub = nilai eigen $\Phi$.
+					\item Uji rank $W_c$ dan $W_o$.
+					\item Hindari \textit{pathological sampling}.
+				\end{itemize}
+			\end{block}
+			\begin{exampleblock}{Tugas besar diumumkan}
+				\small Kontrol kecepatan atau posisi dengan LQR, LQG, MPC, SMC, atau penempatan kutub + pengamat. Presentasi Minggu 15.
+			\end{exampleblock}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{PR-5 (ringkas)}
+				\small
+				\begin{enumerate}
+					\item Turunkan $\Phi$, $\Gamma$ motor posisi secara analitik dan cocokkan dengan angka di slide.
+					\item Tulis bentuk kanonik keterkendalian dari $G_p(z)$ dan cari $P$ yang menghubungkannya ke keadaan fisik.
+					\item Periksa keterkendalian osilator teredam $\zeta=0{,}1$, $\omega_n = 2\pi$ untuk $T=0{,}5$\,s.
+					\item Model motor dengan filter tachometer ($\tau_f = 0{,}1$\,s) sebagai keadaan ketiga: tulis $A, B, C$ dan diskritisasi.
+				\end{enumerate}
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\end{document}

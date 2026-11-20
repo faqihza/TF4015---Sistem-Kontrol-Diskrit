@@ -1,0 +1,104 @@
+\chapter{Pencacahan dan Rekonstruksi}
+\label{bab:pencacahan}
+\enchap{Sampling and Reconstruction}
+
+\begin{tujuan}
+	Setelah mempelajari bab ini, Anda mampu menghitung resolusi dan derau kuantisasi, menjelaskan spektrum sinyal tercacah dan teorema Shannon, mengenali serta mencegah \textit{aliasing}, menurunkan karakteristik \textit{zero-order hold}, dan memilih waktu cacah secara beralasan.
+\end{tujuan}
+
+\section{Rantai konversi sinyal}
+Sinyal sensor melewati beberapa tahap sebelum menjadi bilangan di memori komputer: pengkondisi sinyal dan filter \textit{anti-alias}, \textit{sample-and-hold}, lalu ADC yang mengkuantisasi amplitudo. Sebaliknya, keluaran kontroler diubah oleh DAC menjadi tegangan bertangga. Dua operasi yang membedakan sinyal digital dari sinyal analog adalah \term{pencacahan}{sampling}, yaitu kuantisasi terhadap waktu, dan \term{kuantisasi}{quantisation}, yaitu pembulatan amplitudo.
+
+\section{Kuantisasi amplitudo}
+ADC $n$-bit dengan rentang penuh FSR membagi rentang itu menjadi $2^n$ tingkat dengan lebar
+\begin{equation}
+	Q = \frac{\text{FSR}}{2^n}.
+\end{equation}
+Dengan pembulatan, galat kuantisasi memenuhi $|e_q| \le Q/2$. Bila sinyal bervariasi cukup banyak dibanding $Q$, $e_q$ dapat dimodelkan sebagai derau acak berdistribusi seragam pada $[-Q/2, Q/2]$ dengan variansi
+\begin{equation}
+	\sigma_q^2 = \frac{1}{Q}\int_{-Q/2}^{Q/2}\xi^2\,d\xi = \frac{Q^2}{12}.
+\end{equation}
+Untuk ADC Arduino 10-bit dengan referensi 5\,V, $Q = 4{,}88$\,mV dan $\sigma_q = 1{,}41$\,mV; untuk DAC MCP4725 12-bit, $Q = 1{,}22$\,mV dan $\sigma_q = 0{,}35$\,mV.
+
+Kuantisasi berdampak pada kontrol dalam tiga cara. Pertama, perubahan di bawah $Q$ tidak terlihat sehingga galat tunak minimum sekitar $Q/2$. Kedua, kontroler dengan integrator dapat berburu bolak-balik antara dua tingkat kuantisasi (siklus batas). Ketiga, estimasi turunan $\Delta y/T$ hanya bernilai kelipatan $Q/T$, sehingga makin kecil $T$ makin kasar estimasinya. Pada kit, satu LSB potensiometer setara $0{,}35^\circ$ poros potensiometer; dengan $T = 10$\,ms itu setara kecepatan semu $35^\circ$/s.
+
+\section{Pencacahan ideal dan spektrum}
+Pencacah ideal dimodelkan sebagai perkalian sinyal dengan deret impuls:
+\begin{equation}
+	x^*(t) = \sum_{k=-\infty}^{\infty} x(kT)\,\delta(t-kT),\qquad X^*(s) = \sum_{k=0}^{\infty}x(kT)e^{-kTs}.
+\end{equation}
+Substitusi $z = e^{sT}$ pada $X^*(s)$ menghasilkan transformasi Z yang dibahas di Bab~\ref{bab:z}. Di domain frekuensi, perkalian dengan deret impuls menjadikan spektrum periodik:
+\begin{equation}
+	X^*(j\omega) = \frac{1}{T}\sum_{n=-\infty}^{\infty}X\big(j(\omega - n\omega_s)\big),\qquad \omega_s = \frac{2\pi}{T}.
+\end{equation}
+Spektrum asli disalin ke setiap kelipatan $\omega_s$. Bila spektrum asli terbatas pada $|\omega| < \omega_m$ dan $\omega_s > 2\omega_m$, salinan-salinan itu tidak tumpang tindih.
+
+\section{Teorema Shannon dan \textit{aliasing}}
+\paragraph{Teorema pencacahan.} Sinyal yang spektrumnya terbatas pada $|\omega| < \omega_m$ dapat direkonstruksi sempurna dari sampelnya bila $\omega_s > 2\omega_m$. Frekuensi $\omega_N = \omega_s/2$ disebut \term{frekuensi Nyquist}{Nyquist frequency}. Rekonstruksi idealnya adalah interpolasi sinc
+\begin{equation}
+	x(t) = \sum_{k=-\infty}^{\infty}x(kT)\,\frac{\sin\big(\omega_s(t-kT)/2\big)}{\omega_s(t-kT)/2},
+\end{equation}
+yang nonkausal sehingga tidak dapat dipakai dalam kontrol waktu nyata.
+
+Bila syarat Shannon dilanggar, komponen berfrekuensi $f$ muncul sebagai frekuensi lain
+\begin{equation}
+	f_a = |f - nf_s|,\qquad n = \text{round}(f/f_s).
+\end{equation}
+Gejala ini disebut \term{\textit{aliasing}}{aliasing}. Sinus 9\,Hz yang dicacah 10\,Hz menghasilkan sampel yang identik dengan sinus 1\,Hz (Gambar~\ref{fig:b2-alias}); derau jala-jala 60\,Hz yang dicacah 50\,Hz muncul sebagai 10\,Hz. Setelah dicacah, alias tidak dapat dibedakan dari sinyal asli, sehingga pencegahan harus dilakukan \emph{sebelum} ADC dengan filter lolos-rendah analog (filter \textit{anti-alias}). Filter ini menambah tunda fasa yang perlu diperhitungkan dalam model plant. Pada kit, pengkondisi tachometer berupa filter RC dengan $\tau_f = 0{,}1$\,s yang meredam riak, tetapi sekaligus menambah dinamika pada pengukuran kecepatan.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}
+		\begin{axis}[skd,width=11cm,height=5cm,xmin=0,xmax=1,ymin=-1.3,ymax=1.3,xlabel={$t$ (s)},ytick={-1,0,1},legend style={at={(0.5,1.02)},anchor=south},legend columns=3]
+			\addplot[skdblue!60,domain=0:1,samples=400,thin] {sin(deg(2*pi*9*x))};
+			\addplot[skdorange,dashed,domain=0:1,samples=100] {-sin(deg(2*pi*x))};
+			\addplot[skdred,only marks,mark=*,mark size=1.6pt,samples at={0,0.1,...,1}] {sin(deg(2*pi*9*x))};
+			\legend{sinyal 9 Hz, alias 1 Hz, sampel $f_s=10$ Hz}
+		\end{axis}
+	\end{tikzpicture}
+	\caption{\textit{Aliasing}: sinyal 9\,Hz dicacah 10\,Hz}
+	\label{fig:b2-alias}
+\end{figure}
+
+\section{Rekonstruksi dengan \textit{data hold}}
+\subsection{Zero-order hold}
+DAC menahan setiap sampel konstan selama satu periode cacah: $u(t) = u(kT)$ untuk $kT \le t < (k+1)T$. Respons impuls ZOH adalah pulsa persegi selebar $T$, sehingga
+\begin{equation}
+	G_h(s) = \frac{1-e^{-sT}}{s},\qquad G_h(j\omega) = T\,\frac{\sin(\omega T/2)}{\omega T/2}\,e^{-j\omega T/2}.
+\end{equation}
+Penguatan ZOH pada frekuensi rendah adalah $T$, yang diimbangi faktor $1/T$ dari pencacah. Magnitudonya turun ke $2/\pi \approx 0{,}64$ di $\omega_N$, sehingga ZOH bukan filter rekonstruksi ideal. Yang paling penting untuk kontrol adalah fasanya, $-\omega T/2$: ZOH berperilaku seperti \textbf{tunda setengah waktu cacah}. Pendekatan praktisnya
+\begin{equation}
+	\frac{G_h(s)}{T} \approx e^{-sT/2} \approx \frac{1}{1+sT/2}.
+\end{equation}
+
+\subsection{First-order hold}
+FOH mengekstrapolasi garis lurus dari dua sampel terakhir, $u(t) = u(kT) + \frac{u(kT)-u((k-1)T)}{T}(t-kT)$. Untuk sinyal yang mulus, batas galat rekonstruksinya $\frac{T^2}{2}\max|\ddot u|$, lebih kecil daripada ZOH ($T\max|\dot u|$), tetapi fasanya lebih buruk pada frekuensi tinggi dan implementasinya lebih rumit. DAC pada praktiknya selalu berupa ZOH.
+
+\section{Memilih waktu cacah}
+Waktu cacah yang terlalu besar menurunkan margin fasa (tunda $T/2$), memperlambat respons terhadap gangguan, dan berisiko \textit{aliasing}. Waktu cacah yang terlalu kecil membebani komputasi, membuat kutub diskrit menumpuk dekat $z=1$ sehingga peka terhadap kuantisasi koefisien (Bab~\ref{bab:impl}), dan membuat estimasi derivatif sangat berderau. Aturan praktis yang umum dipakai:
+\begin{itemize}
+	\item $\omega_s \approx 20$--$40$ kali \textit{bandwidth} kalang tertutup [FR 8.5];
+	\item 4--10 sampel per waktu naik kalang tertutup;
+	\item untuk plant FOPDT, $T \approx 0{,}1\tau$--$0{,}2\tau$ dan jauh lebih kecil dari tunda $\theta$.
+\end{itemize}
+
+\begin{contoh}[Waktu cacah untuk kontrol kecepatan motor]
+	Plant $G_v(s) = 1/(0{,}5s+1)$ dengan target konstanta waktu kalang tertutup $\tau_{cl} \approx 0{,}15$\,s. \textit{Bandwidth} $\omega_b \approx 1/\tau_{cl} \approx 6{,}7$ rad/s, sehingga $\omega_s \approx 133$--$267$ rad/s atau $T \approx 0{,}024$--$0{,}047$\,s. Waktu naik $t_r \approx 2{,}2\tau_{cl} = 0{,}33$\,s; 4--10 sampel per waktu naik memberi $T \approx 0{,}03$--$0{,}08$\,s. Pilihan $T$ di kisaran 0,03--0,05\,s wajar. Contoh analitik di catatan ini memakai $T = 0{,}1$\,s agar angka mudah diikuti, dan dampaknya dianalisis di Bab~\ref{bab:responsz}--\ref{bab:stabil}. Selain itu waktu eksekusi \texttt{loop()} dan pengiriman serial harus jauh di bawah $T$.
+\end{contoh}
+
+\begin{ringkasan}
+	Kuantisasi: $Q = \text{FSR}/2^n$, $\sigma_q^2 = Q^2/12$. Pencacahan membuat spektrum periodik dengan periode $\omega_s$; Shannon mensyaratkan $\omega_s > 2\omega_m$, jika tidak terjadi \textit{aliasing} yang harus dicegah dengan filter analog sebelum ADC. ZOH: $G_h(s) = (1-e^{-sT})/s$, setara tunda $T/2$. Waktu cacah dipilih dari \textit{bandwidth} atau waktu naik kalang tertutup.\\[3pt]
+	\en{Quantisation step and noise; periodic spectrum of sampled signals; Shannon's theorem and aliasing; the ZOH behaves like a half-sample delay; choose $T$ from closed-loop bandwidth or rise time.}
+\end{ringkasan}
+
+\paragraph{Istilah kunci.} pencacahan \en{(sampling)}, kuantisasi \en{(quantisation)}, frekuensi Nyquist, filter \textit{anti-alias}, \textit{zero-order hold}, \textit{first-order hold}, rekonstruksi \en{(reconstruction)}, \textit{bandwidth}.
+
+\section*{Latihan}
+\begin{enumerate}
+	\item Hitung $Q$ dan $\sigma_q$ untuk ADC 12-bit dengan rentang $\pm10$\,V.
+	\item Sinyal 47\,Hz dicacah 40\,Hz. Berapa frekuensi aliasnya? Bagaimana dengan 130\,Hz yang dicacah 100\,Hz?
+	\item Turunkan $G_h(j\omega)$ dari $G_h(s)$ dan tunjukkan bahwa fasanya $-\omega T/2$.
+	\item Untuk $G(s) = 1/(0{,}2s+1)$ dengan target $\tau_{cl} = 0{,}05$\,s, usulkan $T$ dengan dua aturan praktis yang berbeda.
+	\item Simulasikan sinus 9\,Hz yang dicacah 10\,Hz dengan MATLAB atau Python dan tampilkan aliasnya.
+	\item Bandingkan konstanta waktu filter tachometer kit ($0{,}1$\,s) dengan waktu cacah 100\,ms. Apa konsekuensinya bagi identifikasi model kecepatan?
+\end{enumerate}

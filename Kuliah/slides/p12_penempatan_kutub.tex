@@ -1,0 +1,328 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{skd}
+
+\title[Pertemuan 12 -- Penempatan Kutub]{Penempatan Kutub dengan Umpan Balik Keadaan}
+\subtitle{Pole Placement by State Feedback}
+\author{Ir. Estiyanti Ekawati, M.T., Ph.D. \quad\textbar\quad Faqihza Mukhlish, S.T., M.T., Ph.D.}
+\institute{Program Studi Teknik Fisika, Fakultas Teknologi Industri, Institut Teknologi Bandung}
+\date{Pertemuan 12 \textbar\ Semester I 2026/2027}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+	\titlepage
+\end{frame}
+
+\begin{frame}{Tujuan pertemuan}
+	\framesubtitle{Learning objectives}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{enumerate}
+				\item Merancang umpan balik keadaan $u = -K\mathbf{x}$ untuk menempatkan kutub kalang tertutup.
+				\item Menghitung $K$ dengan pencocokan koefisien dan formula Ackermann.
+				\item Memilih lokasi kutub dari spesifikasi.
+				\item Menambahkan penguatan referensi dan aksi integral.
+				\item Mengenali batas praktis: usaha kontrol dan \textit{deadbeat}.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\begin{block}{Sub-CPMK S11}
+				\small Merancang umpan balik keadaan dengan penempatan kutub, termasuk aksi integral.\\[3pt]
+				\en{Design state feedback by pole placement, including integral action.}
+			\end{block}
+			{\small Bacaan: [OG] 6.1--6.5; [PH] 9.2--9.4; [FR] 7.5}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Umpan Balik Keadaan\texorpdfstring{\\[4pt]{\Large\en{State Feedback}}}{ / State Feedback}}
+% ===========================================================================
+
+\begin{frame}{Struktur umpan balik keadaan}
+	\framesubtitle{State-feedback structure}
+	\begin{columns}[c]
+		\begin{column}{0.52\textwidth}
+			\centering
+			\begin{tikzpicture}[node distance=0.5cm,scale=0.85,transform shape]
+				\node (r) {$r$};
+				\node[blk,right=0.4cm of r,minimum width=0.8cm] (n) {$\bar N$};
+				\node[sum,right=0.5cm of n] (s) {};
+				\node[blk,right=0.7cm of s,minimum width=1.9cm] (p) {$\mathbf{x}^+ = \Phi\mathbf{x} + \Gamma u$};
+				\node[blk,right=0.6cm of p,minimum width=0.7cm] (c) {$C$};
+				\node[right=0.4cm of c] (y) {$y$};
+				\node[blkd,below=0.6cm of p,minimum width=0.8cm] (k) {$K$};
+				\draw[sig] (r) -- (n); \draw[sig] (n) -- (s); \draw[sig] (s) -- node[above,lbl]{$u$} (p);
+				\draw[sig] (p) -- coordinate[pos=0.5](m) node[above,lbl]{$\mathbf{x}$} (c); \draw[sig] (c) -- (y);
+				\draw[sig] (m) |- (k); \draw[sig] (k) -| node[pos=0.9,left,lbl]{$-$} (s);
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\small
+			$u[k] = -K\mathbf{x}[k] + \bar N r[k]$, dengan $K = [k_1\ \cdots\ k_n]$.\\[3pt]
+			Kalang tertutup:
+			\[
+				\mathbf{x}[k+1] = (\Phi - \Gamma K)\mathbf{x}[k] + \Gamma\bar N r[k]
+			\]
+			Kutub = akar $\det(zI - \Phi + \Gamma K) = 0$.
+			\begin{block}{Teorema}
+				\scriptsize Semua $n$ kutub dapat ditempatkan di lokasi mana pun (pasangan sekawan) $\iff$ $(\Phi,\Gamma)$ terkendali.
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Menghitung $K$}
+	\framesubtitle{Computing $K$}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			\textbf{1. Pencocokan koefisien}\\
+			Kutub yang diinginkan $z_1,\dots,z_n$ $\Rightarrow$
+			\[
+				\alpha_c(z) = \prod_i (z - z_i) = z^n + \alpha_1z^{n-1} + \dots + \alpha_n
+			\]
+			Samakan koefisien $\det(zI - \Phi + \Gamma K)$ dengan $\alpha_c(z)$; diperoleh $n$ persamaan linier untuk $k_i$.\\[4pt]
+			Praktis untuk $n=2$ atau 3 dengan tangan.
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\small
+			\textbf{2. Formula Ackermann}
+			\begin{block}{}
+				\[
+					K = \begin{bmatrix}0 & \cdots & 0 & 1\end{bmatrix} W_c^{-1}\,\alpha_c(\Phi)
+				\]
+			\end{block}
+			dengan $\alpha_c(\Phi) = \Phi^n + \alpha_1\Phi^{n-1} + \dots + \alpha_nI$ dan $W_c$ matriks keterkendalian.\\[4pt]
+			{\scriptsize MATLAB: \texttt{acker(Phi,Gam,p)}, \texttt{place(Phi,Gam,p)} (lebih stabil numerik).\\
+			Python: \texttt{control.acker}, \texttt{control.place}.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Memilih lokasi kutub}
+	\framesubtitle{Choosing pole locations}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			\begin{enumerate}
+				\item Tentukan pasangan kutub dominan dari $\zeta$ dan $\omega_n$ (atau $M_p$, $t_s$).
+				\item Petakan: $z_i = e^{s_iT}$.
+				\item Kutub tambahan dibuat 2--5 kali lebih cepat (jari-jari lebih kecil), tetapi tidak berlebihan.
+				\item Periksa usaha kontrol $|u|$ untuk perubahan \textit{setpoint} terbesar.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{alertblock}{Jangan terlalu cepat}
+				\small
+				Memindahkan kutub jauh dari kutub \textit{open-loop} membutuhkan $K$ besar:
+				\begin{itemize}
+					\item aktuator jenuh,
+					\item derau sensor diperkuat,
+					\item sensitif terhadap galat model.
+				\end{itemize}
+				Hanya pindahkan kutub sejauh yang diperlukan spesifikasi.
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Contoh: Kontrol Posisi Motor\texorpdfstring{\\[4pt]{\Large\en{Example: Motor Position Control}}}{ / Example: Motor Position Control}}
+% ===========================================================================
+
+\begin{frame}{Perancangan $K$}
+	\framesubtitle{Designing $K$}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Model Pertemuan 11: $\Phi = \begin{bmatrix}1 & 0{,}09063\\ 0 & 0{,}81873\end{bmatrix}$, $\Gamma = \begin{bmatrix}0{,}00937\\ 0{,}18127\end{bmatrix}$.\\[4pt]
+			\textbf{Spesifikasi}: $\zeta = 0{,}7$, $\omega_n = 4$ rad/s ($M_p \approx 4{,}6\%$, $t_s \approx 1{,}4$\,s).
+			\[
+				s = -2{,}8 \pm j2{,}857\ \Rightarrow\ z = e^{sT} = 0{,}7252 \pm j0{,}2130
+			\]
+			\[
+				\alpha_c(z) = z^2 - 1{,}45031\,z + 0{,}57121
+			\]
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{block}{Hasil Ackermann}
+				\small
+				\[
+					K = \begin{bmatrix} 6{,}669 & 1{,}688\end{bmatrix}
+				\]
+				$u = -6{,}669\,\theta - 1{,}688\,\omega + \bar Nr$
+			\end{block}
+			\small
+			Cek: nilai eigen $\Phi - \Gamma K$ = $0{,}7252 \pm j0{,}2130$. \checkmark\\[3pt]
+			Interpretasi: kontrol PD pada posisi, dengan kecepatan \textbf{diukur} (tachometer) alih-alih diturunkan.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Penguatan referensi $\bar N$}
+	\framesubtitle{Reference gain $\bar N$}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Agar $y \to r$ dalam keadaan tunak, dari $\mathbf{x}_{ss} = (\Phi - \Gamma K)\mathbf{x}_{ss} + \Gamma\bar Nr$:
+			\[
+				\bar N = \frac{1}{C\,(I - \Phi + \Gamma K)^{-1}\,\Gamma}
+			\]
+			Untuk contoh: $\bar N = 6{,}669 = k_1$.\\[3pt]
+			Karena plant tipe 1, $u = k_1(r - \theta) - k_2\omega$.
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{alertblock}{Kelemahan $\bar N$}
+				\small
+				$\bar N$ dihitung dari model. Jika ada \textbf{gangguan beban} atau galat model, galat tunak tidak nol. Solusi: \textbf{aksi integral}.
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Aksi integral}
+	\framesubtitle{Integral action}
+	\begin{columns}[T]
+		\begin{column}{0.54\textwidth}
+			\small
+			Tambahkan keadaan integrator $x_I[k+1] = x_I[k] + (r[k] - y[k])$:
+			\[
+				\begin{bmatrix}\mathbf{x}\\ x_I\end{bmatrix}^{\!+} =
+				\underbrace{\begin{bmatrix}\Phi & 0\\ -C & 1\end{bmatrix}}_{\Phi_a}
+				\begin{bmatrix}\mathbf{x}\\ x_I\end{bmatrix}
+				+ \underbrace{\begin{bmatrix}\Gamma\\ 0\end{bmatrix}}_{\Gamma_a}u
+				+ \begin{bmatrix}0\\ 1\end{bmatrix}r
+			\]
+			$u = -K_a\begin{bmatrix}\mathbf{x}\\ x_I\end{bmatrix}$, dengan $K_a$ dari penempatan kutub pada $(\Phi_a,\Gamma_a)$.
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\begin{block}{Contoh}
+				\small
+				Kutub: $0{,}7252\pm j0{,}2130$ dan $z_3 = e^{-4{,}2T} = 0{,}657$.
+				\[
+					K_a = \begin{bmatrix}15{,}887 & 3{,}104 & -2{,}287\end{bmatrix}
+				\]
+				$u = -15{,}887\,\theta - 3{,}104\,\omega + 2{,}287\,x_I$
+			\end{block}
+			{\scriptsize Gunakan \textit{anti-windup} pada $x_I$ bila $u$ jenuh.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Simulasi: referensi dan gangguan beban}
+	\framesubtitle{Simulation: reference step and load disturbance}
+	\begin{columns}[c]
+		\begin{column}{0.6\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{groupplot}[group style={group size=1 by 2,vertical sep=0.35cm,xticklabels at=edge bottom},skd,width=9cm,height=3.5cm,xmin=0,xmax=8]
+					\nextgroupplot[ylabel={$\theta$},ymin=0,ymax=1.15,legend style={at={(0.98,0.05)},anchor=south east},legend columns=2]
+					\addplot[skdgray,dashed,thin,domain=0:8,forget plot] {1};
+					\addplot[skdorange,const plot] table[x=t,y=y1] {data/p12_pp.dat};
+					\addplot[skdblue,const plot] table[x=t,y=y2] {data/p12_pp.dat};
+					\legend{$K$ + $\bar N$, $K_a$ (integral)}
+					\nextgroupplot[ylabel={$u$},ymin=-1,ymax=16,xlabel={$t$ (s)}]
+					\addplot[skdorange,const plot] table[x=t,y=u1] {data/p12_pp.dat};
+					\addplot[skdblue,const plot] table[x=t,y=u2] {data/p12_pp.dat};
+				\end{groupplot}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.36\textwidth}
+			\small
+			Tangga $r=1$ pada $t=0$; gangguan masukan $-0{,}3$ mulai $t = 4$\,s.\\[3pt]
+			\renewcommand{\arraystretch}{1.2}
+			\begin{tabular}{@{}l c c@{}}
+				\toprule
+				 & $\bar N$ & integral \\
+				\midrule
+				$M_p$ & 4,6\% & 1,8\% \\
+				$t_s$ & 1,5 s & 1,3 s \\
+				$y(\infty)$ & 0,955 & 1,000 \\
+				$u[0]$ & 6,7 & 15,9 \\
+				\bottomrule
+			\end{tabular}\\[4pt]
+			Integral menghilangkan galat akibat gangguan, dengan harga $u$ awal lebih besar.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{\textit{Deadbeat} dengan umpan balik keadaan}
+	\framesubtitle{State-feedback deadbeat}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			Tempatkan semua kutub di $z = 0$: $\alpha_c(z) = z^n$, sehingga $(\Phi - \Gamma K)^n = 0$. Keadaan apa pun mencapai nol dalam paling banyak $n$ cacah.\\[4pt]
+			Untuk motor posisi:
+			\[
+				K_{db} = \begin{bmatrix}55{,}17 & 7{,}18\end{bmatrix}
+			\]
+			Untuk $\theta$ awal $=1$ rad: $u[0] = -55$, jauh di luar batas aktuator.
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{alertblock}{Pelajaran}
+				\small
+				\textit{Deadbeat} adalah batas ekstrem penempatan kutub. Waktu respons $nT$ dipaksa oleh $T$, bukan oleh plant. Dengan $T$ kecil, penguatannya sangat besar (sama dengan kesimpulan Pertemuan 10).
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Implementasi pada kit (Modul 4)}
+	\framesubtitle{Implementation on the kit (Module 4)}
+	\begin{columns}[T]
+		\begin{column}{0.54\textwidth}
+			\begin{block}{}
+				\scriptsize
+\begin{verbatim}
+// tiap T: theta dari potensiometer, w dari tachometer
+float th = posisi_rad();
+float w  = kecepatan_rad_s();
+xI += (r - th);                     // integrator
+float u = -K1*th - K2*w - KI*xI;    // KI = Ka[2]
+float us = constrain(u, -UMAX, UMAX);
+if (us != u) xI -= (r - th);        // anti-windup
+run_motor(us);
+\end{verbatim}
+			\end{block}
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\small
+			\begin{itemize}
+				\item Satuan keadaan harus konsisten dengan model (rad, rad/s, \% masukan).
+				\item Kompensasi \textit{deadzone} tetap diperlukan agar plant mendekati linier.
+				\item Tachometer berderau dan terfilter: alternatif yang lebih baik adalah \textbf{pengamat keadaan} (Pertemuan 13).
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Ringkasan dan latihan}
+	\framesubtitle{Summary and exercises}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Ringkasan}
+				\small
+				\begin{itemize}
+					\item $u = -K\mathbf{x}$: kutub = nilai eigen $\Phi - \Gamma K$.
+					\item Ackermann: $K = [0\ \cdots\ 1]W_c^{-1}\alpha_c(\Phi)$.
+					\item Kutub dari spesifikasi, $z = e^{sT}$; jangan terlalu cepat.
+					\item Aksi integral menghilangkan galat akibat gangguan.
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{Latihan}
+				\small
+				\begin{enumerate}
+					\item Hitung $K$ untuk contoh dengan pencocokan koefisien dan bandingkan dengan Ackermann.
+					\item Rancang $K$ untuk $\zeta = 0{,}8$, $t_s = 1$\,s; hitung $u[0]$ untuk $r = 1$.
+					\item Turunkan $\bar N$ dan tunjukkan $\bar N = k_1$ untuk plant tipe 1.
+					\item Simulasikan $K_a$ dengan batas $|u| \le 5$, dengan dan tanpa \textit{anti-windup}.
+				\end{enumerate}
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\end{document}

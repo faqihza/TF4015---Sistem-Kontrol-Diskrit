@@ -1,0 +1,472 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{skd}
+
+\title[Pertemuan 2 -- Pencacahan]{Sistem Kontrol Digital: Pencacahan dan Rekonstruksi}
+\subtitle{Digital Control Systems: Sampling and Reconstruction}
+\author{Ir. Estiyanti Ekawati, M.T., Ph.D. \quad\textbar\quad Faqihza Mukhlish, S.T., M.T., Ph.D.}
+\institute{Program Studi Teknik Fisika, Fakultas Teknologi Industri, Institut Teknologi Bandung}
+\date{Pertemuan 2 \textbar\ Semester I 2026/2027}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+	\titlepage
+\end{frame}
+
+\begin{frame}{Tujuan pertemuan}
+	\framesubtitle{Learning objectives}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			Setelah pertemuan ini Anda mampu:
+			\begin{enumerate}
+				\item membedakan sinyal kontinu, diskrit, dan digital;
+				\item menghitung resolusi dan derau kuantisasi ADC/DAC;
+				\item menjelaskan spektrum sinyal tercacah dan teorema Shannon;
+				\item mengenali dan mencegah \textit{aliasing};
+				\item menurunkan karakteristik \textit{zero-order hold};
+				\item memilih waktu cacah $T$ secara beralasan.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\begin{block}{Sub-CPMK S2}
+				\small Menjelaskan proses pencacahan, kuantisasi, rekonstruksi, dan \textit{aliasing}, serta memilih waktu cacah.\\[3pt]
+				\en{Explain sampling, quantisation, reconstruction, and aliasing, and select a sampling period.}
+			\end{block}
+			{\small Bacaan: [FR] 8.1, 8.4, 8.5; [OG] 1.4--1.5, 3.2; [PH] 3}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Rantai Konversi Sinyal\texorpdfstring{\\[4pt]{\Large\en{Signal Conversion Chain}}}{ / Signal Conversion Chain}}
+% ===========================================================================
+
+\begin{frame}{Dari dunia fisik ke komputer dan kembali}
+	\framesubtitle{From the physical world to the computer and back}
+	\centering
+	\begin{tikzpicture}[node distance=0.35cm and 0.45cm]
+		\node[blk] (sen) {Sensor};
+		\node[blk,right=of sen] (aa) {Filter\\\textit{anti-alias}};
+		\node[blk,right=of aa] (sh) {\textit{Sample}\\\& \textit{Hold}};
+		\node[blk,right=of sh] (adc) {ADC\\(kuantisasi)};
+		\node[blkd,right=of adc] (cpu) {Algoritma\\kontrol};
+		\node[blk,right=of cpu] (dac) {DAC\\+ ZOH};
+		\node[blk,right=of dac] (act) {Aktuator};
+		\draw[sig] (sen) -- (aa); \draw[sig] (aa) -- (sh); \draw[sig] (sh) -- (adc);
+		\draw[sig] (adc) -- (cpu); \draw[sig] (cpu) -- (dac); \draw[sig] (dac) -- (act);
+		\node[lbl,below=0.15cm of aa] {kontinu};
+		\node[lbl,below=0.15cm of sh] {diskrit};
+		\node[lbl,below=0.15cm of cpu] {digital};
+		\node[lbl,below=0.15cm of dac] {kontinu bertangga};
+	\end{tikzpicture}
+
+	\vspace{0.5cm}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{itemize}
+				\item \term{Pencacahan}{sampling}: mengambil nilai pada $t=kT$ (kuantisasi waktu).
+				\item \term{Kuantisasi}{quantisation}: membulatkan amplitudo ke tingkat terdekat.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{itemize}
+				\item \term{Rekonstruksi}{reconstruction}: mengubah barisan angka kembali menjadi sinyal kontinu, umumnya dengan ZOH.
+				\item Kit SKD: ADC 10-bit internal, DAC MCP4725 12-bit.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Kuantisasi amplitudo}
+	\framesubtitle{Amplitude quantisation}
+	\begin{columns}[c]
+		\begin{column}{0.48\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=7cm,height=5.4cm,xmin=0,xmax=1,ymin=0,ymax=1,xlabel={masukan analog / FSR},ylabel={keluaran / FSR},xtick={0,0.25,0.5,0.75,1},ytick={0,0.25,0.5,0.75,1}]
+					\addplot[skdgray,dashed,domain=0:1] {x};
+					\addplot[skdblue,const plot,samples at={0,0.0625,...,1}] {floor(x*8+0.5)/8};
+				\end{axis}
+			\end{tikzpicture}\\
+			{\scriptsize Kuantiser 3-bit (8 tingkat), pembulatan}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\small
+			Untuk ADC $n$-bit dengan rentang penuh FSR:
+			\[
+				Q = \text{LSB} = \frac{\text{FSR}}{2^n}
+			\]
+			Galat kuantisasi (pembulatan): $|e_q| \le Q/2$. Bila sinyal cukup ``sibuk'', $e_q$ dapat dimodelkan derau seragam:
+			\[
+				\sigma_q^2 = \frac{1}{Q}\int_{-Q/2}^{Q/2} \xi^2\,d\xi = \frac{Q^2}{12}
+			\]
+			\scriptsize
+			\renewcommand{\arraystretch}{1.2}
+			\begin{tabular}{@{}l c c@{}}
+				\toprule
+				Perangkat & $Q$ & $\sigma_q$ \\
+				\midrule
+				ADC Arduino 10-bit, 5\,V & 4,88\,mV & 1,41\,mV \\
+				DAC MCP4725 12-bit, 5\,V & 1,22\,mV & 0,35\,mV \\
+				ADC 16-bit, 10\,V & 0,15\,mV & 0,04\,mV \\
+				\bottomrule
+			\end{tabular}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Dampak kuantisasi pada kontrol}
+	\framesubtitle{Effects of quantisation on control}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{itemize}
+				\item \textbf{Batas resolusi}: perubahan di bawah $Q$ tidak terlihat; galat tunak minimum $\approx Q/2$.
+				\item \textbf{Siklus batas}: kontroler dengan integrator dapat ``berburu'' bolak-balik antar dua tingkat kuantisasi.
+				\item \textbf{Derivatif}: $\Delta y/T$ hanya bernilai kelipatan $Q/T$; makin kecil $T$, makin kasar estimasi turunan.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{Contoh kit}
+				\small
+				Potensiometer satu putaran penuh $=5$\,V, ADC 10-bit $\Rightarrow$ resolusi $360^\circ/1024 \approx 0{,}35^\circ$ poros potensiometer.\\[3pt]
+				Dengan $T=10$\,ms, satu LSB setara kecepatan semu $0{,}35^\circ/0{,}01\,\text{s} = 35^\circ$/s.
+			\end{exampleblock}
+			{\small Solusi umum: perataan beberapa sampel (fungsi \texttt{smooth\_...} di program praktikum), filter, atau estimator keadaan (Pertemuan 13).}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Pencacahan dan Teorema Shannon\texorpdfstring{\\[4pt]{\Large\en{Sampling and Shannon's Theorem}}}{ / Sampling and Shannon's Theorem}}
+% ===========================================================================
+
+\begin{frame}{Model matematis pencacahan}
+	\framesubtitle{Mathematical model of sampling}
+	\begin{columns}[c]
+		\begin{column}{0.5\textwidth}
+			\small
+			Pencacah ideal = perkalian dengan deret impuls:
+			\[
+				x^*(t) = x(t)\sum_{k=-\infty}^{\infty}\delta(t-kT) = \sum_k x(kT)\,\delta(t-kT)
+			\]
+			Transformasi Laplace:
+			\[
+				X^*(s) = \sum_{k=0}^{\infty} x(kT)\,e^{-kTs}
+			\]
+			Dengan substitusi $z = e^{sT}$ diperoleh transformasi Z, $X(z)=\sum x(kT)z^{-k}$ (Pertemuan 3).
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=6.8cm,height=4.4cm,xmin=0,xmax=6,ymin=-1.3,ymax=1.3,xlabel={$t$},ytick=\empty,xtick={0,1,2,3,4,5,6},xticklabels={0,$T$,$2T$,$3T$,$4T$,$5T$,$6T$}]
+					\addplot[skdblue!40,domain=0:6,samples=100] {sin(deg(1.1*x))};
+					\addplot[skdorange,ycomb,mark=triangle*,mark size=2pt,samples at={0,1,...,6}] {sin(deg(1.1*x))};
+				\end{axis}
+			\end{tikzpicture}\\
+			{\scriptsize $x^*(t)$: impuls dengan bobot $x(kT)$}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Spektrum sinyal tercacah}
+	\framesubtitle{Spectrum of a sampled signal}
+	\begin{columns}[c]
+		\begin{column}{0.55\textwidth}
+			\centering
+			\begin{tikzpicture}[yscale=0.9]
+				\foreach \y/\ws/\c in {0/3.2/skdblue, -2.3/1.6/skdred} {
+						\draw[-{Stealth}] (-4.3,\y) -- (4.3,\y) node[right,font=\scriptsize]{$\omega$};
+						\foreach \m in {-2,-1,0,1,2} {
+								\pgfmathsetmacro{\cx}{\m*\ws}
+								\ifdim \cx pt > -4.2pt \ifdim \cx pt < 4.2pt
+									\fill[\c!25,draw=\c] (\cx-1.0,\y) -- (\cx,\y+1.2) -- (\cx+1.0,\y) -- cycle;
+								\fi\fi
+							}
+						\draw (0,\y) -- (0,\y-0.1) node[below,font=\tiny]{0};
+						\draw (\ws,\y) -- (\ws,\y-0.1) node[below,font=\tiny]{$\omega_s$};
+						\draw (\ws/2,\y) -- (\ws/2,\y-0.1) node[below,font=\tiny]{$\omega_N$};
+					}
+				\node[font=\scriptsize,anchor=west] at (-4.3,1.25) {$\omega_s > 2\omega_m$: replika terpisah};
+				\node[font=\scriptsize,anchor=west,text=skdred] at (-4.3,-1.05) {$\omega_s < 2\omega_m$: replika tumpang tindih (\textit{aliasing})};
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\small
+			Pencacahan membuat spektrum menjadi \textbf{periodik}:
+			\[
+				X^*(j\omega) = \frac{1}{T}\sum_{n=-\infty}^{\infty} X\big(j(\omega - n\omega_s)\big)
+			\]
+			dengan $\omega_s = 2\pi/T$.\\[4pt]
+			\term{Frekuensi Nyquist}{Nyquist frequency}: $\omega_N = \omega_s/2$.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Teorema pencacahan Shannon}
+	\framesubtitle{Shannon's sampling theorem}
+	\begin{block}{Teorema}
+		Sinyal $x(t)$ yang spektrumnya terbatas pada $|\omega| < \omega_m$ dapat direkonstruksi sempurna dari sampel $x(kT)$ jika
+		\[
+			\omega_s > 2\,\omega_m .
+		\]
+		\en{A band-limited signal is fully recoverable from its samples if the sampling frequency exceeds twice its highest frequency.}
+	\end{block}
+	\vspace{0.2cm}
+	Rekonstruksi ideal (interpolasi sinc):
+	\[
+		x(t) = \sum_{k=-\infty}^{\infty} x(kT)\,\frac{\sin\big(\omega_s(t-kT)/2\big)}{\omega_s(t-kT)/2}
+	\]
+	\kunci{Rekonstruksi ini \alert{nonkausal} (memerlukan sampel masa depan), sehingga tidak dapat dipakai dalam kontrol waktu nyata. Kontroler memakai \textbf{ZOH}.}
+\end{frame}
+
+\begin{frame}{\textit{Aliasing}: frekuensi yang menyamar}
+	\framesubtitle{Aliasing: frequencies in disguise}
+	\begin{columns}[c]
+		\begin{column}{0.58\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=9cm,height=5cm,xmin=0,xmax=1,ymin=-1.3,ymax=1.3,xlabel={$t$ (s)},ytick={-1,0,1},legend style={at={(0.5,1.02)},anchor=south},legend columns=3]
+					\addplot[skdblue!60,domain=0:1,samples=400,thin] {sin(deg(2*pi*9*x))};
+					\addplot[skdorange,dashed,domain=0:1,samples=100] {-sin(deg(2*pi*x))};
+					\addplot[skdred,only marks,mark=*,mark size=1.6pt,samples at={0,0.1,...,1}] {sin(deg(2*pi*9*x))};
+					\legend{sinyal 9 Hz, alias 1 Hz, sampel $f_s=10$ Hz}
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.38\textwidth}
+			\small
+			Sinyal 9 Hz dicacah 10 Hz menghasilkan sampel yang \textbf{identik} dengan sinyal 1 Hz.\\[4pt]
+			Frekuensi alias:
+			\[
+				f_a = \left| f - n f_s \right|,\quad n = \text{round}(f/f_s)
+			\]
+			\scriptsize
+			\begin{tabular}{@{}c c c@{}}
+				\toprule
+				$f$ & $f_s$ & $f_a$ \\
+				\midrule
+				9 Hz & 10 Hz & 1 Hz \\
+				60 Hz & 50 Hz & 10 Hz \\
+				130 Hz & 100 Hz & 30 Hz \\
+				\bottomrule
+			\end{tabular}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Mencegah \textit{aliasing}}
+	\framesubtitle{Preventing aliasing}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\begin{itemize}
+				\item Pasang \term{filter anti-alias}{anti-aliasing filter} (lolos rendah analog) \textbf{sebelum} ADC, dengan frekuensi potong di bawah $\omega_N$.
+				\item Derau listrik 50 Hz dan derau komutasi motor dapat ber-alias menjadi frekuensi rendah yang mengganggu kalang.
+				\item Filter anti-alias menambah tunda fasa; harus diperhitungkan dalam model plant.
+				\item Alternatif: cacah sangat cepat ($T_{\text{cepat}}$), filter digital, lalu \textit{decimate} ke $T$ kontrol.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{exampleblock}{Pada kit SKD}
+				\small
+				Pengkondisi sinyal tachometer adalah penyearah + filter RC dengan $\tau_f = R_3C_4 = 0{,}1$\,s. Filter ini meredam riak dan derau tinggi, tetapi juga \alert{menambah dinamika} pada pengukuran kecepatan.\\[3pt]
+				Pertanyaan: apa konsekuensinya bila waktu cacah dipilih jauh lebih kecil dari 0,1\,s?
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Rekonstruksi: \textit{Data Hold}\texorpdfstring{\\[4pt]{\Large\en{Reconstruction: Data Hold}}}{ / Reconstruction: Data Hold}}
+% ===========================================================================
+
+\begin{frame}{\textit{Zero-order hold} (ZOH)}
+	\framesubtitle{Zero-order hold}
+	\begin{columns}[c]
+		\begin{column}{0.45\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=6.6cm,height=4.4cm,xmin=0,xmax=6,ymin=-1.3,ymax=1.3,xlabel={$t/T$},ytick=\empty]
+					\addplot[skdblue!40,domain=0:6,samples=100] {sin(deg(1.1*x))};
+					\addplot[skdgreen,const plot,samples at={0,1,...,6}] {sin(deg(1.1*x))};
+					\addplot[skdorange,only marks,mark=*,mark size=1.3pt,samples at={0,1,...,6}] {sin(deg(1.1*x))};
+				\end{axis}
+			\end{tikzpicture}\\
+			{\scriptsize $u(t) = u(kT)$ untuk $kT \le t < (k+1)T$}
+		\end{column}
+		\begin{column}{0.52\textwidth}
+			\small
+			Respons impuls ZOH: pulsa persegi selebar $T$,
+			\[
+				g_h(t) = 1(t) - 1(t-T)\ \Rightarrow\ G_h(s) = \frac{1 - e^{-sT}}{s}
+			\]
+			Respons frekuensi:
+			\[
+				G_h(j\omega) = T\,\frac{\sin(\omega T/2)}{\omega T/2}\,e^{-j\omega T/2}
+			\]
+			\begin{itemize}
+				\item Penguatan $\approx T$ pada frekuensi rendah (diserap oleh pencacah $1/T$).
+				\item Fasa $-\omega T/2$: ZOH \alert{setara tunda setengah waktu cacah}.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Respons frekuensi ZOH}
+	\framesubtitle{ZOH frequency response}
+	\begin{columns}[c]
+		\begin{column}{0.6\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{groupplot}[group style={group size=1 by 2,vertical sep=0.5cm,xticklabels at=edge bottom},skd,width=8.6cm,height=3.4cm,xmin=0.01,xmax=3,xtick={0.5,1,1.5,2,2.5,3},xticklabels={$\tfrac{1}{2}\omega_s$,$\omega_s$,,$2\omega_s$,,$3\omega_s$}]
+					\nextgroupplot[ylabel={$|G_h|/T$},ymin=0,ymax=1.1]
+					\addplot[skdblue,domain=0.01:3,samples=300] {abs(sin(deg(pi*x))/(pi*x))};
+					\draw[skdgray,dashed] (axis cs:0.5,0) -- (axis cs:0.5,1.1);
+					\nextgroupplot[ylabel={fasa (\textdegree)},ymin=-560,ymax=10,xlabel={$\omega$},ytick={0,-180,-360,-540}]
+					\addplot[skdorange,domain=0.01:3,samples=300] {-180*x + 180*floor(x)};
+					\addplot[skdgray,dashed,domain=0.01:3] {-180*x};
+				\end{groupplot}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.36\textwidth}
+			\small
+			\begin{itemize}
+				\item Di $\omega_N$, magnitudo turun ke $2/\pi \approx 0{,}64$ ($-3{,}9$ dB).
+				\item ZOH meloloskan sebagian replika spektral (bukan filter ideal).
+				\item Garis putus: fasa $-\omega T/2$; lompatan $180^\circ$ terjadi di nol magnitudo.
+			\end{itemize}
+			\kunci{Pendekatan praktis: $G_h(s)/T \approx e^{-sT/2} \approx \dfrac{1}{1+sT/2}$.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{\textit{First-order hold} dan alternatif}
+	\framesubtitle{First-order hold and alternatives}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			\textbf{FOH} mengekstrapolasi garis dari dua sampel terakhir:
+			\[
+				u(t) = u(kT) + \frac{u(kT)-u((k-1)T)}{T}(t-kT)
+			\]
+			\begin{itemize}
+				\item Galat lebih kecil untuk sinyal halus.
+				\item Fasa lebih buruk pada frekuensi tinggi; implementasi lebih rumit.
+			\end{itemize}
+			\vspace{0.1cm}
+			Batas galat rekonstruksi (sinyal mulus):
+			\[
+				e_{\text{ZOH}} \le T\max|\dot u|,\qquad e_{\text{FOH}} \le \tfrac{T^2}{2}\max|\ddot u|
+			\]
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=6.6cm,height=4.6cm,xmin=0,xmax=6,ymin=-1.4,ymax=1.4,xlabel={$t/T$},ytick=\empty,legend style={at={(0.5,1.02)},anchor=south},legend columns=3]
+					\addplot[skdblue!40,domain=0:6,samples=100] {sin(deg(1.1*x))};
+					\addplot[skdgreen,const plot,samples at={0,1,...,6}] {sin(deg(1.1*x))};
+					\addplot[skdred,samples=200,domain=1:6] {sin(deg(1.1*floor(x))) + (sin(deg(1.1*floor(x)))-sin(deg(1.1*(floor(x)-1))))*(x-floor(x))};
+					\legend{asli, ZOH, FOH}
+				\end{axis}
+			\end{tikzpicture}\\
+			{\scriptsize DAC pada praktiknya selalu berupa ZOH.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Memilih Waktu Cacah\texorpdfstring{\\[4pt]{\Large\en{Choosing the Sampling Period}}}{ / Choosing the Sampling Period}}
+% ===========================================================================
+
+\begin{frame}{Pertimbangan dalam memilih $T$}
+	\framesubtitle{Trade-offs in choosing $T$}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{alertblock}{$T$ terlalu besar}
+				\small
+				\begin{itemize}
+					\item Tunda ZOH $T/2$ menurunkan margin fasa
+					\item Respons gangguan lambat; risiko \textit{aliasing}
+					\item Kinerja turun, bahkan tidak stabil (Pertemuan 1)
+				\end{itemize}
+			\end{alertblock}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{alertblock}{$T$ terlalu kecil}
+				\small
+				\begin{itemize}
+					\item Beban komputasi dan komunikasi besar
+					\item Kutub diskrit menumpuk dekat $z=1$: sensitif terhadap kuantisasi koefisien (Pertemuan 15)
+					\item Estimasi derivatif sangat berderau
+				\end{itemize}
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+	\vspace{0.3cm}
+	\begin{block}{Aturan praktis \en{(rules of thumb)}}
+		\small
+		\begin{itemize}
+			\item $\omega_s \approx 20$--$40\times$ \textit{bandwidth} kalang tertutup [FR 8.5]
+			\item 4--10 sampel per waktu naik $t_r$ kalang tertutup
+			\item Untuk plant FOPDT: $T \approx 0{,}1\tau$ hingga $0{,}2\tau$, dan $T$ jauh lebih kecil dari waktu tunda $\theta$
+		\end{itemize}
+	\end{block}
+\end{frame}
+
+\begin{frame}{Contoh: memilih $T$ untuk kontrol kecepatan motor}
+	\framesubtitle{Example: choosing $T$ for motor speed control}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Plant acuan semester ini: $G_v(s) = \dfrac{K}{\tau s+1}$, $K=1$, $\tau = 0{,}5$\,s.
+
+			\vspace{0.2cm}
+			Target kalang tertutup: konstanta waktu $\tau_{cl} \approx 0{,}15$\,s.
+			\begin{enumerate}
+				\item \textit{Bandwidth} $\omega_b \approx 1/\tau_{cl} \approx 6{,}7$ rad/s
+				\item $\omega_s \approx 20\omega_b$--$40\omega_b \approx 133$--$267$ rad/s
+				\item $T = 2\pi/\omega_s \approx 0{,}024$--$0{,}047$\,s
+				\item Waktu naik $t_r \approx 2{,}2\tau_{cl} = 0{,}33$\,s $\Rightarrow$ 4--10 sampel: $T \approx 0{,}03$--$0{,}08$\,s
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{block}{Keputusan}
+				\small
+				$T$ di kisaran 0,03--0,05\,s wajar. Sebagai contoh analitik di kuliah dipakai $T=0{,}1$\,s agar angka mudah dihitung tangan; dampak pilihan ini dianalisis di Pertemuan 6--7.
+			\end{block}
+			\vspace{0.1cm}
+			{\small Batasan lain: waktu eksekusi \texttt{loop()} dan pengiriman serial harus jauh di bawah $T$ (Modul 0, Percobaan 4).}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Ringkasan dan latihan}
+	\framesubtitle{Summary and exercises}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Ringkasan}
+				\small
+				\begin{itemize}
+					\item Kuantisasi: $Q=\text{FSR}/2^n$, $\sigma_q^2 = Q^2/12$.
+					\item Pencacahan membuat spektrum periodik dengan periode $\omega_s$.
+					\item Shannon: $\omega_s > 2\omega_m$; jika tidak, terjadi \textit{aliasing}.
+					\item ZOH: $G_h(s) = (1-e^{-sT})/s$, setara tunda $T/2$.
+					\item $T$ dipilih dari \textit{bandwidth} atau waktu naik kalang tertutup.
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{PR-1 (ringkas)}
+				\small
+				\begin{enumerate}
+					\item Hitung $Q$ dan $\sigma_q$ untuk ADC 12-bit $\pm 10$\,V.
+					\item Sinyal 47 Hz dicacah 40 Hz. Berapa frekuensi aliasnya?
+					\item Turunkan $|G_h(j\omega)|$ dan tunjukkan fasanya $-\omega T/2$.
+					\item Untuk $G(s)=1/(0{,}2s+1)$ dengan target $\tau_{cl}=0{,}05$\,s, usulkan $T$ dan jelaskan alasannya.
+					\item Simulasikan sinus 9 Hz dicacah 10 Hz (MATLAB/Python) dan tampilkan aliasnya.
+				\end{enumerate}
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\end{document}

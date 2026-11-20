@@ -1,0 +1,98 @@
+\chapter{Analisis Kestabilan Sistem Diskrit}
+\label{bab:stabil}
+\enchap{Stability Analysis of Discrete-Time Systems}
+
+\begin{tujuan}
+	Setelah mempelajari bab ini, Anda mampu menyatakan syarat kestabilan BIBO sistem diskrit, menerapkan uji Jury, menerapkan transformasi bilinear dengan kriteria Routh--Hurwitz, menghitung rentang penguatan stabil, dan menjelaskan pengaruh waktu cacah serta tunda komputasi terhadap kestabilan.
+\end{tujuan}
+
+\section{Syarat kestabilan}
+Sistem dengan respons impuls $g[k]$ stabil BIBO jika dan hanya jika $\sum_{k=0}^{\infty}|g[k]| < \infty$. Untuk $G(z)$ rasional, setiap kutub $p_i$ menyumbang suku $c_ip_i^k$, sehingga
+\begin{equation}
+	\text{stabil} \iff |p_i| < 1 \ \text{untuk semua kutub}.
+\end{equation}
+Kutub sederhana pada $|z| = 1$ memberi kestabilan marginal (osilasi tetap atau integrator), sedangkan kutub di luar lingkaran satuan atau kutub berulang pada lingkaran satuan memberi ketidakstabilan. Untuk kalang tertutup, kutubnya adalah akar persamaan karakteristik $1 + D(z)G(z) = 0$.
+
+\paragraph{Pencacahan dapat menggoyahkan kalang.} Plant kecepatan dengan kontrol P memiliki kutub kontinu $s = -(1+K_pK)/\tau$ yang stabil untuk semua $K_p > 0$. Versi diskritnya memiliki kutub $z_{cl} = a - K_pb$, yang stabil hanya bila $-1 < a - K_pb < 1$, yaitu
+\begin{equation}
+	0 < K_p < \frac{1+a}{K(1-a)} = \coth\frac{T}{2\tau}.
+\end{equation}
+Dengan $T = 0{,}1$\,s dan $\tau = 0{,}5$\,s, $K_{p,\max} = 10{,}03$. Penyebabnya adalah ZOH yang menahan aksi kontrol selama $T$: penguatan besar menghasilkan koreksi berlebih yang baru terlihat satu cacah kemudian.
+
+\section{Uji Jury}
+Untuk $P(z) = a_nz^n + \dots + a_1z + a_0$ dengan $a_n > 0$, \term{uji Jury}{Jury test} terdiri atas syarat perlu
+\begin{equation}
+	P(1) > 0,\qquad (-1)^nP(-1) > 0,\qquad |a_0| < a_n,
+\end{equation}
+dan, untuk $n \ge 3$, syarat tambahan dari tabel Jury. Baris pertama tabel adalah $a_0, a_1, \dots, a_n$ dan baris kedua kebalikannya. Baris berikutnya dihitung dengan
+\begin{equation}
+	b_k = \begin{vmatrix}a_0 & a_{n-k}\\ a_n & a_k\end{vmatrix} = a_0a_k - a_na_{n-k},\qquad k = 0, \dots, n-1,
+\end{equation}
+dengan syarat $|b_0| > |b_{n-1}|$, lalu proses diulang pada $b_k$ hingga baris terakhir berisi tiga elemen. Untuk orde dua, $P(z) = z^2 + a_1z + a_0$ stabil jika dan hanya jika $P(1) > 0$, $P(-1) > 0$, dan $|a_0| < 1$, yang di bidang $(a_1, a_0)$ membentuk segitiga dengan titik sudut $(-2,1)$, $(2,1)$, dan $(0,-1)$.
+
+\begin{contoh}[Jury orde tiga]
+	$P(z) = z^3 - 0{,}49z + 0{,}12$. Syarat perlu: $P(1) = 0{,}63 > 0$, $(-1)^3P(-1) = 0{,}39 > 0$, dan $|a_0| = 0{,}12 < 1$. Dengan $a_0 = 0{,}12$, $a_1 = -0{,}49$, $a_2 = 0$, $a_3 = 1$:
+	\begin{align*}
+		b_0 &= 0{,}12^2 - 1 = -0{,}9856, & b_1 &= (0{,}12)(-0{,}49) - 0 = -0{,}0588,\\
+		b_2 &= 0 - (1)(-0{,}49) = 0{,}49. &&
+	\end{align*}
+	Karena $|b_0| = 0{,}9856 > |b_2| = 0{,}49$, sistem stabil. Pemeriksaan: akar $P(z)$ adalah $0{,}5$; $0{,}3$; dan $-0{,}8$.
+\end{contoh}
+
+\begin{contoh}[Rentang $K_p$ plant posisi]
+	Dengan $G_p(z) = (b_1z+b_0)/((z-1)(z-a))$ dan $D(z) = K_p$, persamaan karakteristiknya
+	\[
+		z^2 + (K_pb_1 - 1 - a)z + (a + K_pb_0) = 0.
+	\]
+	Syarat Jury: $P(1) = K_p(b_1+b_0) > 0$ memberi $K_p > 0$; $P(-1) = 2(1+a) - K_p(b_1-b_0) > 0$ memberi $K_p < 6\,032$; dan $|a + K_pb_0| < 1$ memberi $K_p < (1-a)/b_0 = 20{,}69$. Jadi $0 < K_p < 20{,}69$. Pada batas itu kedua kutub kompleks berada tepat di lingkaran satuan. Versi kontinu stabil untuk semua $K_p > 0$.
+\end{contoh}
+
+\section{Transformasi bilinear dan Routh--Hurwitz}
+Substitusi
+\begin{equation}
+	z = \frac{1+w}{1-w}\quad\Longleftrightarrow\quad w = \frac{z-1}{z+1}
+\end{equation}
+memetakan bagian dalam lingkaran satuan ke setengah bidang kiri bidang $w$. Setelah substitusi dan perkalian dengan $(1-w)^n$, kriteria Routh--Hurwitz diterapkan pada polinomial $w$; jumlah perubahan tanda kolom pertama tabel Routh sama dengan jumlah akar di luar lingkaran satuan.
+
+\begin{contoh}[Tunda komputasi satu cacah]
+	Bila aksi kontrol baru dikirim satu cacah setelah pengukuran, $L(z) = K_pb/(z(z-a))$ dan $P(z) = z^2 - az + K_pb$. Substitusi bilinear dan perkalian dengan $(1-w)^2$ menghasilkan
+	\[
+		(1 + a + K_pb)w^2 + 2(1 - K_pb)w + (1 - a + K_pb).
+	\]
+	Untuk orde dua, semua koefisien positif jika dan hanya jika $K_pb < 1$, sehingga $K_p < 1/b = 5{,}52$. Tunda satu cacah hampir memotong setengah penguatan maksimum ($10{,}03 \rightarrow 5{,}52$).
+\end{contoh}
+
+\section{Pengaruh waktu cacah dan tunda}
+Gambar~\ref{fig:b7-kmax} menunjukkan $K_{p,\max}$ sebagai fungsi $T$ untuk ketiga kasus di atas. Bila $T \to 0$, $K_{p,\max} \to \infty$ dan kasus kontinu terpulihkan. Memperbesar $T$ menurunkan $K_{p,\max}$ dengan cepat, dan tunda komputasi menurunkannya lebih jauh.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}
+		\begin{axis}[skd,width=11cm,height=6cm,xmin=0,xmax=1,ymode=log,ymin=0.8,ymax=2000,xlabel={$T$ (s)},ylabel={$K_{p,\max}$},legend style={at={(0.98,0.98)},anchor=north east}]
+			\addplot[skdblue] table[x=T,y=k1] {\dat{p7_kmax.dat}};
+			\addplot[skdorange,dashed] table[x=T,y=k1d] {\dat{p7_kmax.dat}};
+			\addplot[skdgreen] table[x=T,y=kpos] {\dat{p7_kmax.dat}};
+			\legend{kecepatan + P, kecepatan + P + tunda, posisi + P}
+		\end{axis}
+	\end{tikzpicture}
+	\caption{Penguatan maksimum yang stabil sebagai fungsi waktu cacah ($\tau = 0{,}5$\,s, $K=1$)}
+	\label{fig:b7-kmax}
+\end{figure}
+
+Pemilihan metode uji bergantung pada keperluan: menghitung akar langsung paling praktis bila semua parameter numerik; Jury atau bilinear dengan Routh cocok untuk parameter simbolik seperti mencari rentang $K_p$ atau $T$; \textit{root locus} dan Nyquist (Bab~\ref{bab:rlocus}--\ref{bab:frek}) memperlihatkan bagaimana kutub bergerak dan seberapa besar margin. Perlu diingat bahwa kestabilan tidak sama dengan kinerja: kutub di $|z| = 0{,}98$ stabil, tetapi responsnya lambat dan berosilasi panjang.
+
+\begin{ringkasan}
+	Sistem diskrit stabil jika dan hanya jika semua kutub di dalam lingkaran satuan. Uji Jury: $P(1) > 0$, $(-1)^nP(-1) > 0$, $|a_0| < a_n$, ditambah tabel untuk $n \ge 3$. Transformasi bilinear dengan Routh adalah alternatif yang setara. Waktu cacah besar dan tunda komputasi menurunkan penguatan maksimum.\\[3pt]
+	\en{A discrete system is stable iff all poles lie inside the unit circle; the Jury test and the bilinear transformation with Routh--Hurwitz give gain ranges symbolically; larger sampling periods and computation delays reduce the maximum stable gain.}
+\end{ringkasan}
+
+\paragraph{Istilah kunci.} kestabilan BIBO \en{(BIBO stability)}, persamaan karakteristik \en{(characteristic equation)}, uji Jury \en{(Jury test)}, transformasi bilinear \en{(bilinear transformation)}, stabil marginal \en{(marginally stable)}, tunda komputasi \en{(computational delay)}.
+
+\section*{Latihan}
+\begin{enumerate}
+	\item Uji kestabilan $P(z) = z^3 - 1{,}2z^2 + 0{,}5z - 0{,}1$ dengan Jury.
+	\item Tentukan rentang $K_p$ stabil untuk plant posisi dengan tunda komputasi satu cacah.
+	\item Buktikan bahwa $(1+a)/(1-a) = \coth(T/2\tau)$ untuk $a = e^{-T/\tau}$.
+	\item Untuk $K_p = 8$ pada plant kecepatan dengan $T = 0{,}1$\,s, hitung $z_{cl}$ dan sketsakan respons tangganya.
+	\item Gunakan transformasi bilinear dan Routh untuk memeriksa soal nomor 1.
+\end{enumerate}

@@ -1,0 +1,330 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{skd}
+
+\title[Pertemuan 6 -- Respons di Bidang z]{Analisis Respons di Bidang $z$}
+\subtitle{Response Analysis in the $z$-Plane}
+\author{Ir. Estiyanti Ekawati, M.T., Ph.D. \quad\textbar\quad Faqihza Mukhlish, S.T., M.T., Ph.D.}
+\institute{Program Studi Teknik Fisika, Fakultas Teknologi Industri, Institut Teknologi Bandung}
+\date{Pertemuan 6 \textbar\ Semester I 2026/2027}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+	\titlepage
+\end{frame}
+
+\begin{frame}{Tujuan pertemuan}
+	\framesubtitle{Learning objectives}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{enumerate}
+				\item Memetakan bidang $s$ ke bidang $z$ melalui $z=e^{sT}$.
+				\item Menghubungkan lokasi kutub diskrit dengan bentuk respons.
+				\item Menerjemahkan spesifikasi ($M_p$, $t_s$) menjadi daerah kutub di bidang $z$.
+				\item Menghitung galat keadaan tunak dari tipe sistem diskrit.
+				\item Menghitung indeks kinerja integral dari data diskrit.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\begin{block}{Sub-CPMK S6}
+				\small Menganalisis respons transien dan keadaan tunak di bidang $z$ terhadap kriteria kinerja.\\[3pt]
+				\en{Analyse transient and steady-state response in the $z$-plane against performance criteria.}
+			\end{block}
+			{\small Bacaan: [OG] 4.2--4.4; [PH] Bab 6; [FR] 8.2, 8.6}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Pemetaan Bidang $s$ ke Bidang $z$\texorpdfstring{\\[4pt]{\Large\en{Mapping the $s$-Plane to the $z$-Plane}}}{ / Mapping the s-Plane to the z-Plane}}
+% ===========================================================================
+
+\begin{frame}{$z = e^{sT}$}
+	\framesubtitle{The mapping $z = e^{sT}$}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\small
+			Untuk $s = \sigma + j\omega$:
+			\[
+				z = e^{\sigma T}e^{j\omega T}\quad\Rightarrow\quad |z| = e^{\sigma T},\ \ \angle z = \omega T
+			\]
+			\renewcommand{\arraystretch}{1.3}
+			\begin{tabular}{@{}l l@{}}
+				\toprule
+				\textbf{Bidang $s$} & \textbf{Bidang $z$} \\
+				\midrule
+				sumbu $j\omega$ & lingkaran satuan $|z|=1$ \\
+				setengah bidang kiri & dalam lingkaran satuan \\
+				$s=0$ & $z=1$ \\
+				$\sigma$ konstan & lingkaran $|z| = e^{\sigma T}$ \\
+				$\omega$ konstan & garis radial sudut $\omega T$ \\
+				$\omega = \pm\omega_s/2$ & sumbu riil negatif \\
+				\bottomrule
+			\end{tabular}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\small
+			\begin{alertblock}{Pemetaan banyak-ke-satu}
+				$s$ dan $s + jn\omega_s$ dipetakan ke $z$ yang sama. Hanya ``jalur primer'' $|\omega| < \omega_s/2$ yang bermakna (lihat \textit{aliasing}).
+			\end{alertblock}
+			\vspace{0.1cm}
+			Contoh ($T=0{,}1$\,s):
+			\begin{itemize}
+				\item $s=-2$ $\Rightarrow$ $z = e^{-0{,}2} = 0{,}819$
+				\item $s=-20$ $\Rightarrow$ $z = 0{,}135$ (cepat $\rightarrow$ dekat titik asal)
+				\item $s=-2 \pm j3{,}46$ $\Rightarrow$ $z = 0{,}819\angle\!\pm 19{,}8^\circ$
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Kontur $\zeta$ dan $\omega_n$ konstan}
+	\framesubtitle{Constant-$\zeta$ and constant-$\omega_n$ contours}
+	\begin{columns}[c]
+		\begin{column}{0.5\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[width=8.4cm,height=8.4cm,axis equal image,xmin=-1.1,xmax=1.1,ymin=0,ymax=1.1,axis lines=middle,xtick={-1,-0.5,0.5,1},ytick={0.5,1},tick label style={font=\tiny}]
+					\addplot[skdgray,domain=0:180,samples=60] ({cos(x)},{sin(x)});
+					\foreach \zt in {0.1,0.3,0.5,0.7,0.9} {
+							\addplot[skdblue,domain=0:3.14159,samples=60,variable=\t] ({exp(-\zt*\t/sqrt(1-\zt^2))*cos(deg(\t))},{exp(-\zt*\t/sqrt(1-\zt^2))*sin(deg(\t))});
+						}
+					\foreach \wn in {0.31416,0.62832,0.94248,1.25664,1.5708} {
+							\addplot[skdorange,domain=0:0.999,samples=40,variable=\zz] ({exp(-\zz*\wn)*cos(deg(\wn*sqrt(1-\zz^2)))},{exp(-\zz*\wn)*sin(deg(\wn*sqrt(1-\zz^2)))});
+						}
+					\node[font=\tiny,text=skdblue] at (axis cs:-0.62,0.86) {$\zeta=0{,}1$};
+					\node[font=\tiny,text=skdblue] at (axis cs:0.05,0.35) {$0{,}5$};
+					\node[font=\tiny,text=skdorange] at (axis cs:0.98,0.33) {$\tfrac{\pi}{10}$};
+					\node[font=\tiny,text=skdorange] at (axis cs:0.22,0.98) {$\omega_nT=\tfrac{\pi}{2}$};
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\small
+			Untuk kutub $s = -\zeta\omega_n \pm j\omega_n\sqrt{1-\zeta^2}$:
+			\[
+				z = e^{-\zeta\omega_nT}\angle\pm\omega_nT\sqrt{1-\zeta^2}
+			\]
+			\begin{itemize}
+				\item \textcolor{skdblue}{Biru}: $\zeta$ konstan, spiral logaritmik dari $z=1$.
+				\item \textcolor{skdorange}{Jingga}: $\omega_nT$ konstan.
+			\end{itemize}
+			\textbf{Kebalikannya}, dari kutub $z = re^{\pm j\theta}$:
+			\[
+				\zeta = \frac{-\ln r}{\sqrt{\ln^2 r + \theta^2}},\quad
+				\omega_n = \frac{\sqrt{\ln^2 r + \theta^2}}{T}
+			\]
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Lokasi kutub dan bentuk respons}
+	\framesubtitle{Pole location and response shape}
+	\centering
+	\begin{tikzpicture}
+		\begin{groupplot}[group style={group size=3 by 2,horizontal sep=0.9cm,vertical sep=1.25cm},skd,width=5.0cm,height=2.9cm,xmin=-0.5,xmax=20.5,ymin=-1.1,ymax=1.6,ytick={-1,0,1},xtick={0,10,20}]
+			\nextgroupplot[title={\scriptsize $z=0{,}5$: meluruh cepat},title style={yshift=-5pt}]
+			\addplot[skdblue,ycomb,mark=*,mark size=0.9pt] table[x=k,y=r05] {data/p6_poles.dat};
+			\nextgroupplot[title={\scriptsize $z=0{,}9$: meluruh lambat},title style={yshift=-5pt}]
+			\addplot[skdblue,ycomb,mark=*,mark size=0.9pt] table[x=k,y=r09] {data/p6_poles.dat};
+			\nextgroupplot[title={\scriptsize $z=-0{,}5$: bergantian tanda},title style={yshift=-5pt}]
+			\addplot[skdorange,ycomb,mark=*,mark size=0.9pt] table[x=k,y=rm05] {data/p6_poles.dat};
+			\nextgroupplot[title={\scriptsize $0{,}8\angle\pm30^\circ$: osilasi teredam},title style={yshift=-5pt}]
+			\addplot[skdgreen,ycomb,mark=*,mark size=0.9pt] table[x=k,y=c08] {data/p6_poles.dat};
+			\nextgroupplot[title={\scriptsize $0{,}95\angle\pm60^\circ$: redaman kecil},title style={yshift=-5pt}]
+			\addplot[skdgreen,ycomb,mark=*,mark size=0.9pt] table[x=k,y=c095] {data/p6_poles.dat};
+			\nextgroupplot[title={\scriptsize $z=1{,}05$: tidak stabil},title style={yshift=-5pt},ymax=3,ytick={0,1,2,3}]
+			\addplot[skdred,ycomb,mark=*,mark size=0.9pt] table[x=k,y=r105] {data/p6_poles.dat};
+		\end{groupplot}
+	\end{tikzpicture}
+
+	\vspace{0.1cm}
+	{\small Respons impuls $r^k\cos(\theta k)$. Jari-jari $r$ $\rightarrow$ laju peluruhan; sudut $\theta$ $\rightarrow$ sampel per periode osilasi $= 2\pi/\theta$.}
+\end{frame}
+
+\begin{frame}{Spesifikasi sebagai daerah di bidang $z$}
+	\framesubtitle{Specifications as a region in the $z$-plane}
+	\begin{columns}[c]
+		\begin{column}{0.48\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[width=7cm,height=7cm,axis equal image,xmin=-1.1,xmax=1.1,ymin=-1.1,ymax=1.1,axis lines=middle,xtick={-1,1},ytick={-1,1},tick label style={font=\tiny}]
+					\addplot[skdgray,domain=0:360,samples=80] ({cos(x)},{sin(x)});
+					% ts: r <= exp(-4T/ts) = exp(-0.2)=0.8187 (T=0.1, ts=2)
+					\addplot[skdred,dashed,domain=0:360,samples=80] ({0.8187*cos(x)},{0.8187*sin(x)});
+					% zeta >= 0.5 spiral (atas dan bawah)
+					\addplot[name path=sp1,skdblue,domain=0:3.14159,samples=60,variable=\t] ({exp(-0.57735*\t)*cos(deg(\t))},{exp(-0.57735*\t)*sin(deg(\t))});
+					\addplot[name path=sp2,skdblue,domain=0:3.14159,samples=60,variable=\t] ({exp(-0.57735*\t)*cos(deg(\t))},{-exp(-0.57735*\t)*sin(deg(\t))});
+					\addplot[skdgreen,opacity=0.25,fill,domain=0:3.14159,samples=60,variable=\t] ({min(exp(-0.57735*\t),0.8187)*cos(deg(\t))},{min(exp(-0.57735*\t),0.8187)*sin(deg(\t))}) -- (axis cs:0,0) -- cycle;
+					\addplot[skdgreen,opacity=0.25,fill,domain=0:3.14159,samples=60,variable=\t] ({min(exp(-0.57735*\t),0.8187)*cos(deg(\t))},{-min(exp(-0.57735*\t),0.8187)*sin(deg(\t))}) -- (axis cs:0,0) -- cycle;
+					\node[font=\tiny,text=skdred] at (axis cs:0.55,0.78) {$|z|=e^{-4T/t_s}$};
+					\node[font=\tiny,text=skdblue] at (axis cs:-0.55,0.42) {$\zeta=0{,}5$};
+					\addplot[only marks,mark=x,mark size=3pt,thick,skdorange] coordinates {(0.7701,0.278) (0.7701,-0.278)};
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\small
+			Contoh: $M_p \le 16\%$ ($\zeta \ge 0{,}5$), $t_s \le 2$\,s, $T=0{,}1$\,s.
+			\begin{enumerate}
+				\item $t_s \approx \dfrac{4}{\zeta\omega_n}$ $\Rightarrow$ $r \le e^{-4T/t_s} = e^{-0{,}2} = 0{,}819$ (lingkaran merah).
+				\item $\zeta \ge 0{,}5$ $\Rightarrow$ di dalam spiral biru.
+				\item Daerah hijau = irisan keduanya.
+			\end{enumerate}
+			Kutub $\times$: $z = 0{,}770 \pm j0{,}278$ memberi $\zeta=0{,}50$, $\omega_n=4{,}0$ rad/s, tepat di batas.\\[3pt]
+			{\scriptsize Daerah ini menjadi target perancangan \textit{root locus} (Pertemuan 9) dan penempatan kutub (Pertemuan 12).}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Respons Transien dan Keadaan Tunak\texorpdfstring{\\[4pt]{\Large\en{Transient and Steady-State Response}}}{ / Transient and Steady-State Response}}
+% ===========================================================================
+
+\begin{frame}{Contoh: kontrol P kecepatan motor}
+	\framesubtitle{Example: proportional speed control}
+	\begin{columns}[c]
+		\begin{column}{0.52\textwidth}
+			\small
+			$G_v(z) = \dfrac{b}{z-a}$, $D(z)=K_p$:
+			\[
+				\frac{Y(z)}{R(z)} = \frac{K_pb}{z - a + K_pb}
+			\]
+			Kutub kalang tertutup: $z_{cl} = a - K_pb$.\\[3pt]
+			Dengan $K_p = 2$: $z_{cl} = 0{,}8187 - 2(0{,}1813) = 0{,}4562$.
+			\begin{itemize}
+				\item Konstanta waktu setara: $-T/\ln z_{cl} = 0{,}127$\,s (plant: 0,5\,s).
+				\item Nilai akhir: $\dfrac{K_pb}{1-a+K_pb} = \dfrac{K_pK}{1+K_pK} = 0{,}667$.
+				\item Galat tunak: $e_{ss} = \dfrac{1}{1+K_pK} = 0{,}333$.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=6.6cm,height=4.8cm,xmin=-0.05,xmax=2.05,ymin=0,ymax=1.1,xlabel={$t$ (s)},ylabel={$y[k]$}]
+					\addplot[skdgray,dashed,thin,domain=0:2] {1};
+					\addplot[skdgray,dotted,thick,domain=0:2] {0.6667};
+					\addplot[skdblue,ycomb,mark=*,mark size=1.2pt] table[x=t,y=y] {data/p6_pspeed.dat};
+					\node[font=\scriptsize,anchor=south east] at (axis cs:2,0.68) {$e_{ss}=1/3$};
+				\end{axis}
+			\end{tikzpicture}\\
+			{\scriptsize Pertanyaan: berapa $K_p$ yang membuat $z_{cl}$ negatif, dan apa artinya?}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Kutub dominan dan pengaruh zero}
+	\framesubtitle{Dominant poles and the effect of zeros}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\begin{itemize}
+				\item Kutub yang \textbf{paling dekat lingkaran satuan} meluruh paling lambat: \term{kutub dominan}{dominant poles}.
+				\item Kutub dekat titik asal ($z\approx0$) meluruh dalam satu atau dua cacah; dapat diabaikan untuk aproksimasi.
+				\item Kutub di $z=0$ = tunda murni satu cacah.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{itemize}
+				\item Zero dekat $z=1$ memperbesar lewatan (efek derivatif).
+				\item Zero di sumbu riil negatif (misalnya \textit{sampling zero} $-0{,}936$ plant posisi) memengaruhi respons antar-cacah dan perancangan \textit{deadbeat}.
+				\item Pasangan kutub--zero yang berdekatan saling meniadakan (\textit{dipole}), tetapi meninggalkan ``ekor'' lambat.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\kunci{Aturan praktis: rumus $M_p$ dan $t_s$ orde 2 akurat bila kutub lain minimal 3--5 kali lebih cepat (jari-jari jauh lebih kecil).}
+\end{frame}
+
+\begin{frame}{Galat keadaan tunak dan tipe sistem}
+	\framesubtitle{Steady-state error and system type}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Umpan balik satuan, $L(z) = D(z)G(z)$: $E(z) = \dfrac{R(z)}{1+L(z)}$,\ \ $e_{ss} = \lim\limits_{z\to1}(z-1)E(z)$.\\[2pt]
+			\term{Tipe sistem}{system type} = jumlah kutub $L(z)$ di $z=1$.\\[3pt]
+			\footnotesize
+			\renewcommand{\arraystretch}{1.9}
+			\begin{tabular}{@{}l l l@{}}
+				\toprule
+				Masukan & Konstanta & $e_{ss}$ \\
+				\midrule
+				Tangga & $K_p = \lim_{z\to1}L(z)$ & $\dfrac{1}{1+K_p}$ \\
+				\textit{Ramp} $kT$ & $K_v = \lim_{z\to1}\dfrac{(z-1)L(z)}{T}$ & $\dfrac{1}{K_v}$ \\
+				Parabola & $K_a = \lim_{z\to1}\dfrac{(z-1)^2L(z)}{T^2}$ & $\dfrac{1}{K_a}$ \\
+				\bottomrule
+			\end{tabular}
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{exampleblock}{Contoh}
+				\small
+				\textbf{Kecepatan + P} (tipe 0): $K_p = K_pK$, $e_{ss}^{\text{tangga}} = \dfrac{1}{1+K_pK}$.\\[4pt]
+				\textbf{Posisi + P} (tipe 1): $e_{ss}^{\text{tangga}} = 0$.\\
+				$(z-1)G_p(z)\big|_{z=1} = \dfrac{b_1+b_0}{1-a} = 0{,}1 = KT$\\
+				$\Rightarrow K_v = K_pK$, $e_{ss}^{\text{ramp}} = \dfrac{1}{K_pK}$.
+			\end{exampleblock}
+			{\small Hasil sama dengan kasus kontinu karena ZOH mempertahankan penguatan DC.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Indeks kinerja integral}
+	\framesubtitle{Integral performance indices}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Dari data diskrit dengan periode $T$:
+			\renewcommand{\arraystretch}{1.6}
+			\begin{tabular}{@{}l l l@{}}
+				\toprule
+				Indeks & Kontinu & Diskrit \\
+				\midrule
+				IAE & $\int |e|\,dt$ & $T\sum |e[k]|$ \\
+				ISE & $\int e^2\,dt$ & $T\sum e[k]^2$ \\
+				ITAE & $\int t|e|\,dt$ & $T^2\sum k|e[k]|$ \\
+				\bottomrule
+			\end{tabular}\\[4pt]
+			\begin{itemize}
+				\item ISE menghukum galat besar (awal respons).
+				\item ITAE menghukum galat yang bertahan lama.
+				\item Tambahkan usaha kontrol: $\sum u[k]^2$ (dasar LQR, Pertemuan 14).
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{block}{Dalam laporan praktikum}
+				\small
+				Laporkan untuk setiap uji: $t_r$, $t_s$ (2\%), $M_p$, $e_{ss}$, IAE, dan $u_{\max}$, dihitung dari data \textit{Serial Monitor}.
+			\end{block}
+			\vspace{0.1cm}
+			{\small Spesifikasi kinerja dan metode evaluasinya mengacu pada praktik standar evaluasi pengontrol proses (lihat RPS, Bagian Kriteria Kinerja).}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Ringkasan dan latihan}
+	\framesubtitle{Summary and exercises}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Ringkasan}
+				\small
+				\begin{itemize}
+					\item $z=e^{sT}$: kiri $\rightarrow$ dalam lingkaran satuan.
+					\item Jari-jari $\rightarrow$ peluruhan; sudut $\rightarrow$ frekuensi osilasi.
+					\item Spesifikasi $\rightarrow$ daerah: lingkaran ($t_s$) $\cap$ spiral ($\zeta$).
+					\item Tipe sistem = jumlah kutub di $z=1$.
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{PR-3 (ringkas)}
+				\small
+				\begin{enumerate}
+					\item Hitung $\zeta$ dan $\omega_n$ dari kutub $z = 0{,}6 \pm j0{,}3$, $T=0{,}1$\,s. (Jawab: 0,65; 6,12 rad/s)
+					\item Gambarkan daerah kutub untuk $M_p\le5\%$, $t_s\le1$\,s, $T=0{,}05$\,s.
+					\item Untuk plant kecepatan dengan kontrol P, cari $K_p$ agar $e_{ss}\le 0{,}1$, lalu hitung lokasi kutub dan komentari.
+					\item Hitung IAE dari data respons Modul 1 atau 2.
+				\end{enumerate}
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\end{document}

@@ -1,0 +1,288 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{skd}
+
+\title[Pertemuan 10 -- Respons Frekuensi dan Deadbeat]{Respons Frekuensi dan Perancangan Langsung}
+\subtitle{Frequency Response and Direct Design}
+\author{Ir. Estiyanti Ekawati, M.T., Ph.D. \quad\textbar\quad Faqihza Mukhlish, S.T., M.T., Ph.D.}
+\institute{Program Studi Teknik Fisika, Fakultas Teknologi Industri, Institut Teknologi Bandung}
+\date{Pertemuan 10 \textbar\ Semester I 2026/2027}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+	\titlepage
+\end{frame}
+
+\begin{frame}{Tujuan pertemuan}
+	\framesubtitle{Learning objectives}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{enumerate}
+				\item Menghitung respons frekuensi sistem diskrit dan margin kestabilannya.
+				\item Menjelaskan pengaruh ZOH pada margin fasa.
+				\item Memakai transformasi $w$ untuk perancangan dengan diagram Bode.
+				\item Merancang pengontrol dengan metode Ragazzini: \textit{deadbeat} dan Dahlin.
+				\item Mengenali riak antar-cacah dan merancang \textit{deadbeat} bebas riak.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\begin{block}{Sub-CPMK S9}
+				\small Merancang pengontrol diskrit menggunakan respons frekuensi (bidang $w$) dan metode langsung (\textit{deadbeat}).\\[3pt]
+				\en{Design discrete controllers using frequency response ($w$-plane) and direct methods (deadbeat).}
+			\end{block}
+			{\small Bacaan: [OG] 4.5--4.6; [PH] 7.6--7.8, Bab 8; [FR] 8.6}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Respons Frekuensi Sistem Diskrit\texorpdfstring{\\[4pt]{\Large\en{Frequency Response of Discrete Systems}}}{ / Frequency Response of Discrete Systems}}
+% ===========================================================================
+
+\begin{frame}{Respons frekuensi $G(e^{j\omega T})$}
+	\framesubtitle{Frequency response $G(e^{j\omega T})$}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			Masukan $u[k] = \sin(\omega kT)$ pada sistem stabil menghasilkan keluaran tunak
+			\[
+				y[k] = |G(e^{j\omega T})|\sin\big(\omega kT + \angle G(e^{j\omega T})\big)
+			\]
+			\begin{itemize}
+				\item Evaluasi $G(z)$ pada lingkaran satuan $z = e^{j\omega T}$.
+				\item Periodik dengan periode $\omega_s$; cukup digambar hingga $\omega_N = \pi/T$.
+				\item Margin penguatan (GM) dan margin fasa (PM) didefinisikan seperti kasus kontinu.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{block}{Acuan margin}
+				\small
+				Praktik industri umum: PM $30^\circ$--$60^\circ$, GM $\ge 6$\,dB, puncak sensitivitas $M_s \le 2$.\\[3pt]
+				PM berkaitan dengan redaman: $\zeta \approx \text{PM}/100$ untuk PM $< 60^\circ$.
+			\end{block}
+			{\scriptsize MATLAB/Python: \texttt{bode(Gd)}, \texttt{margin(Gd)} untuk sistem diskrit menggambar hingga $\omega_N$.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Pengaruh ZOH pada margin}
+	\framesubtitle{Effect of the ZOH on stability margins}
+	\begin{columns}[c]
+		\begin{column}{0.6\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{groupplot}[group style={group size=1 by 2,vertical sep=0.35cm,xticklabels at=edge bottom},skd,width=9cm,height=3.5cm,xmode=log,xmin=0.1,xmax=31.4]
+					\nextgroupplot[ylabel={dB},ymin=-60,ymax=40,legend style={at={(0.98,0.95)},anchor=north east}]
+					\addplot[skdgray,dashed,thin,domain=0.1:31.4,forget plot] {0};
+					\addplot[skdblue] table[x=w,y=mc] {data/p10_bode.dat};
+					\addplot[skdorange] table[x=w,y=md] {data/p10_bode.dat};
+					\legend{kontinu, diskrit $T=0{,}1$ s}
+					\nextgroupplot[ylabel={fasa (\textdegree)},ymin=-280,ymax=-80,xlabel={$\omega$ (rad/s)},ytick={-270,-180,-90}]
+					\addplot[skdgray,dashed,thin,domain=0.1:31.4] {-180};
+					\addplot[skdblue] table[x=w,y=pc] {data/p10_bode.dat};
+					\addplot[skdorange] table[x=w,y=pd] {data/p10_bode.dat};
+				\end{groupplot}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.36\textwidth}
+			\small
+			Plant posisi dengan $K_p = 5$:\\[3pt]
+			\renewcommand{\arraystretch}{1.25}
+			\begin{tabular}{@{}l c c@{}}
+				\toprule
+				 & kontinu & diskrit \\
+				\midrule
+				$\omega_c$ (rad/s) & 2,86 & 2,86 \\
+				PM & $34{,}9^\circ$ & $26{,}8^\circ$ \\
+				GM & $\infty$ & 12,3\,dB \\
+				\bottomrule
+			\end{tabular}\\[4pt]
+			Selisih PM $\approx \omega_cT/2 = 8{,}2^\circ$: tunda setengah cacah dari ZOH.\\[3pt]
+			Fasa diskrit terus turun menuju $\omega_N = 31{,}4$ rad/s sehingga GM menjadi berhingga.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Transformasi $w$}
+	\framesubtitle{The $w$-transformation}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			\[
+				w = \frac{2}{T}\,\frac{z-1}{z+1},\qquad z = \frac{1 + wT/2}{1 - wT/2}
+			\]
+			\begin{itemize}
+				\item Lingkaran satuan $\rightarrow$ sumbu imajiner $w = j\nu$.
+				\item $G(w)$ rasional, sehingga semua alat Bode kontinu berlaku.
+				\item Frekuensi semu: $\nu = \dfrac{2}{T}\tan\dfrac{\omega T}{2}$.
+			\end{itemize}
+			\scriptsize
+			Contoh $T=0{,}1$\,s: $\omega=10 \rightarrow \nu = 10{,}9$; \ $\omega = 30 \rightarrow \nu = 282$.\\
+			Di bawah $\approx\omega_s/10$, $\nu \approx \omega$.
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{block}{Prosedur perancangan di bidang $w$}
+				\small
+				\begin{enumerate}
+					\item Hitung $G(z)$ (ZOH), lalu $G(w)$.
+					\item Rancang $C(w)$ (\textit{lead}, \textit{lag}, PI) dengan Bode untuk PM/GM target.
+					\item Substitusi $w = \frac{2}{T}\frac{z-1}{z+1}$ ke $C(w)$ $\Rightarrow$ $D(z)$.
+					\item Verifikasi respons waktu.
+				\end{enumerate}
+			\end{block}
+			{\scriptsize Berbeda dari emulasi Tustin: di sini ZOH sudah termasuk di $G(w)$, jadi tidak ada aproksimasi.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Perancangan Langsung (Ragazzini)\texorpdfstring{\\[4pt]{\Large\en{Direct Design (Ragazzini)}}}{ / Direct Design (Ragazzini)}}
+% ===========================================================================
+
+\begin{frame}{Ide: pilih respons kalang tertutup}
+	\framesubtitle{Idea: specify the closed-loop response}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			Tentukan fungsi transfer kalang tertutup yang diinginkan $F(z)$, lalu selesaikan untuk $D(z)$:
+			\[
+				F = \frac{DG}{1+DG}\quad\Longrightarrow\quad
+				\boxed{D(z) = \frac{1}{G(z)}\,\frac{F(z)}{1-F(z)}}
+			\]
+			Kontroler ``membalik'' plant, maka harus hati-hati.
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{alertblock}{Syarat $F(z)$}
+				\small
+				\begin{enumerate}
+					\item \textbf{Kausal}: tunda $F$ $\ge$ tunda $G$ (selisih derajat penyebut--pembilang).
+					\item \textbf{Stabil internal}: zero $G$ di luar atau dekat lingkaran satuan harus menjadi zero $F$; kutub $G$ yang tidak stabil harus menjadi zero $1-F$.
+					\item \textbf{Galat tunak}: $1-F(z)$ memiliki faktor $(z-1)$ untuk tangga, yaitu $F(1)=1$.
+				\end{enumerate}
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{\textit{Deadbeat} dan Dahlin pada plant kecepatan}
+	\framesubtitle{Deadbeat and Dahlin controllers for the speed plant}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\footnotesize
+			$G_v(z) = \dfrac{b}{z-a}$ (tunda 1 cacah, tanpa zero bermasalah).\\[3pt]
+			\textbf{\textit{Deadbeat}}: $F(z) = z^{-1}$ (keluaran tepat di \textit{setpoint} setelah satu cacah):
+			\[
+				D(z) = \frac{z-a}{b}\cdot\frac{z^{-1}}{1-z^{-1}} = \frac{z-a}{b(z-1)}
+			\]
+			Ini adalah PI dengan zero membatalkan kutub plant.\\[3pt]
+			\textbf{Dahlin}: $F(z) = \dfrac{1-q}{z-q}$, $q = e^{-T/\lambda}$ (orde 1 dengan konstanta waktu $\lambda$):
+			\[
+				D(z) = \frac{(1-q)(z-a)}{b(z-1)}
+			\]
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{groupplot}[group style={group size=1 by 2,vertical sep=0.35cm,xticklabels at=edge bottom},skd,width=7cm,height=3.2cm,xmin=-0.05,xmax=1.45]
+					\nextgroupplot[ylabel={$y$},ymin=0,ymax=1.2,legend style={at={(0.98,0.35)},anchor=south east},legend columns=1]
+					\addplot[skdred,ycomb,mark=*,mark size=1pt] table[x=t,y=yd] {data/p10_db.dat};
+					\addplot[skdblue,ycomb,mark=square*,mark size=1pt] table[x=t,y=yh] {data/p10_db.dat};
+					\legend{\textit{deadbeat}, Dahlin $\lambda=0{,}3$}
+					\nextgroupplot[ylabel={$u$},ymin=0,ymax=6,xlabel={$t$ (s)}]
+					\addplot[skdred,const plot] table[x=t,y=ud] {data/p10_db.dat};
+					\addplot[skdblue,const plot] table[x=t,y=uh] {data/p10_db.dat};
+				\end{groupplot}
+			\end{tikzpicture}\\
+			{\scriptsize \textit{Deadbeat}: $u[0] = 1/b = 5{,}52$. Dahlin: $u[0] = (1-q)/b = 1{,}56$.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{\textit{Deadbeat} plant posisi dan riak antar-cacah}
+	\framesubtitle{Position deadbeat and intersample ripple}
+	\begin{columns}[c]
+		\begin{column}{0.58\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{groupplot}[group style={group size=1 by 2,vertical sep=0.35cm,xticklabels at=edge bottom},skd,width=8.8cm,height=3.4cm,xmin=0,xmax=1.5]
+					\nextgroupplot[ylabel={$y(t)$},ymin=0,ymax=1.5,legend style={at={(0.98,0.95)},anchor=north east},legend columns=2]
+					\addplot[skdgray,dashed,thin,domain=0:1.5,forget plot] {1};
+					\addplot[skdred] table[x=t,y=ymp] {data/p10_ripple.dat};
+					\addplot[skdblue] table[x=t,y=yrf] {data/p10_ripple.dat};
+					\legend{\textit{minimal prototype}, bebas riak}
+					\nextgroupplot[ylabel={$u$},ymin=-200,ymax=200,xlabel={$t$ (s)}]
+					\addplot[skdred] table[x=t,y=ump] {data/p10_ripple.dat};
+					\addplot[skdblue] table[x=t,y=urf] {data/p10_ripple.dat};
+				\end{groupplot}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.38\textwidth}
+			\small
+			\textbf{\textit{Minimal prototype}} $F=z^{-1}$ membatalkan \textit{sampling zero} $-0{,}936$. Sampel $y[k]$ benar, tetapi $u$ bergantian $\pm$ ratusan dan $y(t)$ \alert{beriak di antara cacah}.\\[4pt]
+			\textbf{Bebas riak}: masukkan zero plant ke $F$:
+			\[
+				F(z) = \frac{b_1z + b_0}{(b_1+b_0)z^2}
+			\]
+			Selesai dalam 2 cacah, $u$ konstan setelahnya.\\[3pt]
+			{\scriptsize Keduanya butuh $u$ sangat besar ($T$ kecil): \textit{deadbeat} cocok bila $T$ besar atau aktuator kuat.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Kapan memakai perancangan langsung?}
+	\framesubtitle{When to use direct design}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{Cocok}
+				\small
+				\begin{itemize}
+					\item Proses lambat dengan $T$ relatif besar (kimia, termal).
+					\item Plant dengan tunda murni: Dahlin memberi bentuk respons yang dapat diprediksi.
+					\item Bila model akurat dan aktuator tidak mudah jenuh.
+				\end{itemize}
+			\end{exampleblock}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{alertblock}{Hati-hati}
+				\small
+				\begin{itemize}
+					\item Pembatalan plant: peka terhadap galat model.
+					\item Usaha kontrol besar saat $T$ kecil.
+					\item Hanya menjamin respons pada sampel; periksa $y(t)$ kontinu.
+					\item Tidak ada jaminan margin kestabilan: cek GM/PM.
+				\end{itemize}
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+	\kunci{Dahlin dengan $\lambda$ sebagai satu parameter penala adalah kompromi praktis antara kecepatan dan usaha kontrol.}
+\end{frame}
+
+\begin{frame}{Ringkasan dan latihan}
+	\framesubtitle{Summary and exercises}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Ringkasan}
+				\small
+				\begin{itemize}
+					\item $G(e^{j\omega T})$ hingga $\omega_N$; ZOH mengurangi PM sebesar $\approx\omega_cT/2$.
+					\item Transformasi $w$: Bode kontinu untuk plant diskrit, tanpa aproksimasi.
+					\item Ragazzini: $D = \frac{1}{G}\frac{F}{1-F}$ dengan syarat kausal, stabil, galat tunak.
+					\item \textit{Deadbeat} cepat tetapi mahal; Dahlin lebih lunak.
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{Latihan}
+				\small
+				\begin{enumerate}
+					\item Hitung $G_p(w)$ untuk plant posisi dan rancang \textit{lead} agar PM $=50^\circ$.
+					\item Rancang Dahlin untuk plant kecepatan dengan $\lambda = 0{,}2$\,s; hitung $u[0]$.
+					\item Turunkan $D(z)$ \textit{deadbeat} bebas riak untuk plant posisi dan periksa $u[k]$.
+					\item Ulangi \textit{deadbeat} plant posisi untuk $T = 0{,}5$\,s; bandingkan $u[0]$.
+				\end{enumerate}
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\end{document}

@@ -1,0 +1,160 @@
+\chapter{Pendahuluan dan Tinjauan Kontrol Kontinu}
+\enchap{Introduction and Review of Continuous-Time Control}
+
+\begin{tujuan}
+	Setelah mempelajari bab ini, Anda mampu menjelaskan struktur sistem kontrol digital, meninjau kembali pemodelan dan fungsi transfer sistem kontinu, menghubungkan spesifikasi kinerja dengan lokasi kutub, serta menala pengontrol PID secara heuristik. Bab ini juga menunjukkan mengapa pencacahan menuntut alat analisis baru.
+\end{tujuan}
+
+\section{Sistem kontrol digital}
+\term{Kontrol}{control} adalah upaya memastikan suatu sistem berperilaku sesuai kriteria perancangannya. Pada sistem kontrol modern, hampir semua pengontrol diwujudkan dalam perangkat lunak yang dijalankan oleh mikrokontroler, PLC, atau komputer. Komputer tidak dapat mengamati sinyal fisik secara terus-menerus; ia hanya membaca sensor pada saat-saat tertentu, menghitung aksi kontrol, lalu menahan aksi itu sampai perhitungan berikutnya.
+
+Struktur umum sistem kontrol digital ditunjukkan pada Gambar~\ref{fig:b1-struktur}. Plant dan aktuator bekerja dalam waktu kontinu dengan sinyal $u(t)$ dan $y(t)$. Komputer bekerja dengan barisan bilangan $u[k]$ dan $y[k]$ yang diperbarui setiap \term{waktu cacah}{sampling period} $T$. Dua antarmuka menghubungkan keduanya: \textit{analog-to-digital converter} (ADC) yang mencacah dan mengkuantisasi pengukuran, serta \textit{digital-to-analog converter} (DAC) yang menahan keluaran digital sebagai tegangan konstan selama satu periode cacah.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}[node distance=0.55cm and 0.7cm]
+		\node[sum] (s) {};
+		\node[left=0.6cm of s] (r) {$r[k]$};
+		\node[blkd,right=of s] (c) {Kontroler\\$D(z)$};
+		\node[blk,right=0.9cm of c] (dac) {DAC\\+ ZOH};
+		\node[blk,right=0.9cm of dac] (p) {Aktuator\\+ plant $G(s)$};
+		\node[right=0.9cm of p] (y) {$y(t)$};
+		\node[blk,below=0.8cm of p] (sen) {Sensor};
+		\node[blk] (adc) at (dac |- sen) {ADC};
+		\draw[sig] (r) -- (s);
+		\draw[sig] (s) -- node[above,lbl]{$e[k]$} (c);
+		\draw[sig] (c) -- node[above,lbl]{$u[k]$} (dac);
+		\draw[sig] (dac) -- node[above,lbl]{$u(t)$} (p);
+		\draw[sig] (p) -- coordinate[pos=0.5](yt) (y);
+		\draw[sig] (yt) |- (sen);
+		\draw[sig] (sen) -- (adc);
+		\draw[sig] (adc) -| node[pos=0.25,above,lbl]{$y[k]$} node[pos=0.95,left,lbl]{$-$} (s);
+		\node[draw=skdorange,dashed,thick,rounded corners,fit=(s)(c),inner sep=0.3cm,label={[font=\scriptsize,text=skdorange]above:komputer}] {};
+	\end{tikzpicture}
+	\caption{Struktur sistem kontrol digital}
+	\label{fig:b1-struktur}
+\end{figure}
+
+Pada kit praktikum SKD, kontroler adalah Arduino UNO, DAC adalah MCP4725 yang diikuti penguat dan driver motor, plant adalah motor DC 24\,V, sensornya tachometer dan potensiometer, dan ADC adalah ADC 10-bit internal Arduino. Setiap konsep di kuliah ini akan ditemui kembali secara fisik di kit tersebut.
+
+Kontrol digital menawarkan fleksibilitas (algoritma diubah lewat perangkat lunak), kemampuan menjalankan algoritma kompleks, bebas \textit{drift} komponen, serta kemudahan pencatatan data dan komunikasi. Konsekuensinya, informasi di antara saat cacah hilang, ZOH dan waktu komputasi menambah tunda, sinyal terkuantisasi, dan analisisnya memerlukan alat baru: persamaan beda dan transformasi Z.
+
+\section{Pemodelan dan fungsi transfer}
+Model dinamik diturunkan dari hukum dasar fisika. Untuk motor DC, hukum Kirchhoff pada rangkaian jangkar dan hukum Newton pada poros memberi
+\begin{align}
+	L\frac{di}{dt} + Ri &= v - K\omega, &
+	J\frac{d\omega}{dt} + b\omega &= Ki .
+\end{align}
+Dengan transformasi Laplace (kondisi awal nol),
+\begin{equation}
+	\frac{\Omega(s)}{V(s)} = \frac{K}{(Js+b)(Ls+R)+K^2}.
+\end{equation}
+Induktansi jangkar biasanya kecil sehingga kutub listrik jauh lebih cepat daripada kutub mekanik, dan model dapat disederhanakan menjadi orde satu
+\begin{equation}
+	\frac{\Omega(s)}{V(s)} \approx \frac{K_m}{\tau_m s+1},\qquad K_m = \frac{K}{bR+K^2},\quad \tau_m = \frac{JR}{bR+K^2}.
+\end{equation}
+Dalam praktik, $K_m$ dan $\tau_m$ diperoleh dari data eksperimen (Bab~\ref{bab:ftpulsa}), bukan dari parameter fisik yang jarang diketahui akurat.
+
+\term{Fungsi transfer}{transfer function} $G(s) = Y(s)/U(s)$ menyatakan hubungan masukan--keluaran dengan kondisi awal nol. Akar penyebutnya adalah \term{kutub}{poles} dan akar pembilangnya \term{zero}{zeros}. Beberapa model generik yang sering dipakai ditunjukkan pada Tabel~\ref{tab:b1-model}.
+
+\begin{table}[H]
+	\centering
+	\caption{Model proses generik}
+	\label{tab:b1-model}
+	\renewcommand{\arraystretch}{2.0}
+	\begin{tabular}{@{}l l l@{}}
+		\toprule
+		Model & $G(s)$ & Contoh \\
+		\midrule
+		Orde 1 & $\dfrac{K}{\tau s+1}$ & kecepatan motor, suhu \\
+		Integrator & $\dfrac{K}{s}$ & posisi motor, level tangki \\
+		Orde 2 & $\dfrac{K\omega_n^2}{s^2+2\zeta\omega_ns+\omega_n^2}$ & pegas--massa, servo \\
+		FOPDT & $\dfrac{Ke^{-\theta s}}{\tau s+1}$ & proses industri \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\section{Respons dan spesifikasi kinerja}
+\subsection{Sistem orde satu}
+Respons tangga satuan sistem $K/(\tau s+1)$ adalah $y(t) = K(1-e^{-t/\tau})$. Keluaran mencapai 63,2\% nilai akhir pada $t=\tau$ dan masuk pita 2\% setelah $t_s \approx 4\tau$. Garis singgung awal memotong nilai akhir tepat di $t=\tau$.
+
+\subsection{Sistem orde dua}
+Untuk $0<\zeta<1$, kutub $s = -\zeta\omega_n \pm j\omega_d$ dengan $\omega_d = \omega_n\sqrt{1-\zeta^2}$, dan spesifikasi respons tangga dapat didekati dengan
+\begin{equation}
+	M_p = e^{-\pi\zeta/\sqrt{1-\zeta^2}},\qquad t_p = \frac{\pi}{\omega_d},\qquad t_r \approx \frac{1{,}8}{\omega_n},\qquad t_s \approx \frac{4}{\zeta\omega_n}\ (2\%).
+	\label{eq:b1-spek}
+\end{equation}
+Persamaan~\eqref{eq:b1-spek} menunjukkan bahwa bagian riil kutub menentukan laju peluruhan dan sudut kutub terhadap sumbu riil negatif menentukan redaman. Spesifikasi $M_p$ dan $t_s$ karenanya menjadi daerah yang diinginkan di bidang $s$: di kiri garis $\sigma = -4/t_s$ dan di dalam sektor $\cos^{-1}\zeta$. Daerah ini akan dipetakan ke bidang $z$ pada Bab~\ref{bab:responsz}.
+
+\subsection{Kestabilan dan galat keadaan tunak}
+Sistem kalang tertutup dengan persamaan karakteristik $1 + C(s)G(s) = 0$ stabil BIBO bila semua akarnya berada di setengah bidang kiri. Dengan teorema nilai akhir, galat tunak untuk masukan tangga adalah $e_{ss} = 1/(1+K_p)$ dengan $K_p = \lim_{s\to0}C(s)G(s)$, dan untuk masukan \textit{ramp} $e_{ss} = 1/K_v$ dengan $K_v = \lim_{s\to0}sC(s)G(s)$. Jumlah integrator pada $C(s)G(s)$ disebut \term{tipe sistem}{system type}.
+
+\section{Pengontrol PID dan penalaan heuristik}
+Pengontrol PID ideal adalah
+\begin{equation}
+	u(t) = K_p\left[e(t) + \frac{1}{T_i}\int_0^t e(\tau)\,d\tau + T_d\frac{de(t)}{dt}\right],\qquad
+	C(s) = K_p\left(1 + \frac{1}{T_is} + T_ds\right).
+\end{equation}
+Dalam praktik aksi derivatif difilter, $T_ds \rightarrow T_ds/(1+T_ds/N)$ dengan $N \approx 5$--$20$, dan sering dikenakan pada pengukuran $-y$ agar perubahan tangga \textit{setpoint} tidak menimbulkan lonjakan aksi kontrol.
+
+Bila model analitik tidak tersedia, parameter PID dapat ditala dari eksperimen sederhana. Metode \textbf{kurva reaksi} mencocokkan respons tangga kalang terbuka dengan model FOPDT $Ke^{-\theta s}/(\tau s+1)$, lalu memakai Tabel~\ref{tab:b1-zn}. Metode \textbf{osilasi kritis} menaikkan penguatan P hingga keluaran berosilasi dengan amplitudo tetap, mencatat penguatan kritis $K_u$ dan periodenya $P_u$, lalu memakai $K_p = 0{,}6K_u$, $T_i = P_u/2$, $T_d = P_u/8$ untuk PID. Metode Cohen--Coon memakai FOPDT dengan $r = \theta/\tau$:
+\[
+	K_p = \frac{1}{Kr}\Big(\frac43 + \frac r4\Big),\quad T_i = \theta\frac{32+6r}{13+8r},\quad T_d = \theta\frac{4}{11+2r}.
+\]
+
+\begin{table}[H]
+	\centering
+	\caption{Penalaan Ziegler--Nichols kurva reaksi}
+	\label{tab:b1-zn}
+	\renewcommand{\arraystretch}{2.0}
+	\begin{tabular}{@{}l c c c@{}}
+		\toprule
+		 & $K_p$ & $T_i$ & $T_d$ \\
+		\midrule
+		P & $\dfrac{\tau}{K\theta}$ & -- & -- \\
+		PI & $\dfrac{0{,}9\tau}{K\theta}$ & $3{,}33\theta$ & -- \\
+		PID & $\dfrac{1{,}2\tau}{K\theta}$ & $2\theta$ & $0{,}5\theta$ \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\begin{contoh}[Penalaan Ziegler--Nichols]
+	Plant $G(s) = 2e^{-0{,}3s}/(1{,}5s+1)$. Tabel~\ref{tab:b1-zn} memberi $K_p = 1{,}2(1{,}5)/(2\cdot0{,}3) = 3{,}0$, $T_i = 0{,}6$\,s, dan $T_d = 0{,}15$\,s. Simulasi kalang tertutup (D pada pengukuran, $N=10$) menghasilkan $M_p \approx 64\%$ dan $t_s \approx 2{,}9$\,s. Lewatan besar adalah ciri khas ZN yang menargetkan redaman seperempat (\textit{quarter decay}); hasil ini adalah titik awal untuk penalaan halus. Cohen--Coon memberi $K_p \approx 3{,}46$, $T_i \approx 0{,}68$\,s, $T_d \approx 0{,}11$\,s.
+\end{contoh}
+
+\section{Mengapa perlu analisis diskrit}
+Bila PID yang sama dijalankan oleh komputer setiap $T$ detik dan keluarannya ditahan oleh ZOH, perilaku kalang tertutup berubah. Gambar~\ref{fig:b1-sampling} menunjukkan contoh di atas dengan $T$ yang berbeda tanpa mengubah parameter PID. Dengan $T = 0{,}02$\,s lewatan naik menjadi sekitar 74\%, dengan $T = 0{,}05$\,s sekitar 89\% dan osilasi lambat teredam, dan dengan $T = 0{,}10$\,s sistem tidak stabil. Penyebabnya adalah ZOH yang berperilaku seperti tunda $\approx T/2$ serta derivatif diskrit yang memperkuat perubahan antar-cacah.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}
+		\begin{axis}[skd,width=11cm,height=6cm,xmin=0,xmax=6,ymin=-0.2,ymax=2.4,xlabel={$t$ (s)},ylabel={$y$},legend style={at={(0.5,1.02)},anchor=south},legend columns=4,restrict y to domain=-1:3]
+			\addplot[skdblue] table[x=t,y=y] {\dat{pid_cont.dat}};
+			\addplot[skdgreen] table[x=t,y=y] {\dat{pid_T002.dat}};
+			\addplot[skdorange] table[x=t,y=y] {\dat{pid_T005.dat}};
+			\addplot[skdred] table[x=t,y=y] {\dat{pid_T010.dat}};
+			\legend{kontinu, $T=0{,}02$ s, $T=0{,}05$ s, $T=0{,}10$ s}
+		\end{axis}
+	\end{tikzpicture}
+	\caption{PID yang sama pada waktu cacah berbeda}
+	\label{fig:b1-sampling}
+\end{figure}
+
+Kuliah ini menjawab pertanyaan-pertanyaan berikut secara berurutan: berapa waktu cacah yang tepat (Bab~\ref{bab:pencacahan}), bagaimana memodelkan plant dilihat dari komputer (Bab~\ref{bab:z}--\ref{bab:ftpulsa}), bagaimana mengubah $C(s)$ menjadi algoritma (Bab~\ref{bab:emulasi}), kapan sistem diskrit stabil dan bagaimana kinerjanya (Bab~\ref{bab:responsz}--\ref{bab:stabil}), bagaimana merancang langsung di bidang $z$ (Bab~\ref{bab:rlocus}--\ref{bab:frek}), bagaimana memakai ruang keadaan dan kriteria optimal (Bab~\ref{bab:ss}--\ref{bab:lqr}), serta apa yang harus diperhatikan saat implementasi (Bab~\ref{bab:impl}).
+
+\begin{ringkasan}
+	Sistem kontrol digital menggabungkan plant kontinu dengan kontroler diskrit melalui ADC, DAC/ZOH, dan jam cacah $T$. Spesifikasi kinerja ($M_p$, $t_s$, $e_{ss}$) terkait langsung dengan lokasi kutub. PID dengan penalaan ZN atau Cohen--Coon memberi titik awal heuristik. Pencacahan mengubah perilaku kalang tertutup sehingga diperlukan alat analisis diskrit.\\[3pt]
+	\en{A digital control system couples a continuous plant with a discrete controller through ADC, DAC/ZOH, and a sampling clock. Performance specifications map to pole locations; heuristic PID tuning gives a starting point; sampling changes closed-loop behaviour and requires discrete-time analysis tools.}
+\end{ringkasan}
+
+\paragraph{Istilah kunci.} waktu cacah \en{(sampling period)}, kuantisasi \en{(quantisation)}, \textit{zero-order hold}, fungsi transfer \en{(transfer function)}, kutub \en{(pole)}, lewatan maksimum \en{(maximum overshoot)}, waktu turun \en{(settling time)}, galat keadaan tunak \en{(steady-state error)}, kurva reaksi \en{(process reaction curve)}, penguatan kritis \en{(ultimate gain)}.
+
+\section*{Latihan}
+\begin{enumerate}
+	\item Gambarkan diagram blok kit praktikum SKD dan tandai bagian yang bekerja dalam waktu kontinu, diskrit, dan digital.
+	\item Sistem orde satu mencapai 63\% nilai akhirnya dalam 0,4\,s. Perkirakan waktu turun 2\%.
+	\item Spesifikasi meminta $M_p \le 10\%$ dan $t_s \le 2$\,s. Tentukan batas $\zeta$ dan bagian riil kutub, lalu sketsakan daerahnya di bidang $s$.
+	\item Mengapa pengontrol P saja tidak dapat menghilangkan galat tunak terhadap masukan tangga untuk plant orde satu?
+	\item Hitung parameter PI Ziegler--Nichols dan Cohen--Coon untuk $G(s) = 1{,}5e^{-0{,}5s}/(4s+1)$.
+	\item Jelaskan secara kualitatif mengapa memperbesar waktu cacah pada Gambar~\ref{fig:b1-sampling} menambah lewatan.
+\end{enumerate}

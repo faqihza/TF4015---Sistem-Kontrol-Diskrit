@@ -1,0 +1,126 @@
+\chapter{Persamaan Beda dan Transformasi Z}
+\label{bab:z}
+\enchap{Difference Equations and the Z-Transform}
+
+\begin{tujuan}
+	Setelah mempelajari bab ini, Anda mampu menulis model sistem diskrit sebagai persamaan beda, menghitung transformasi Z sinyal dasar, memakai sifat-sifatnya, menghitung transformasi Z invers, menyelesaikan persamaan beda, dan menghitung nilai akhir.
+\end{tujuan}
+
+\section{Persamaan beda}
+Kontroler digital menjalankan \term{persamaan beda}{difference equation}: aturan rekursif yang menghitung keluaran baru dari keluaran lama dan masukan. Bentuk umum persamaan beda linier orde $n$ adalah
+\begin{equation}
+	y[k] + a_1y[k-1] + \dots + a_ny[k-n] = b_0u[k] + b_1u[k-1] + \dots + b_mu[k-m].
+\end{equation}
+Persamaan beda dapat diperoleh dengan mendekati turunan. Untuk plant kecepatan $\tau\dot y + y = Ku$, beda maju $\dot y(kT) \approx (y[k+1]-y[k])/T$ memberi
+\begin{equation}
+	y[k+1] = \Big(1 - \frac{T}{\tau}\Big)y[k] + \frac{KT}{\tau}u[k].
+\end{equation}
+Dengan $T=0{,}1$\,s, $\tau=0{,}5$\,s, dan $K=1$, diperoleh $y[k+1] = 0{,}8y[k] + 0{,}2u[k]$. Pendekatan Euler ini hanya aproksimasi; ekuivalen eksak dengan ZOH (Bab~\ref{bab:ftpulsa}) memberi koefisien $0{,}8187$ dan $0{,}1813$.
+
+Persamaan beda dapat diselesaikan dengan rekursi. Untuk $y[k] = 0{,}8y[k-1] + 0{,}2u[k-1]$ dengan $y[0]=0$ dan $u[k]=1$, diperoleh $y = 0;\ 0{,}2;\ 0{,}36;\ 0{,}488;\ 0{,}590;\ \dots$ Rekursi mudah bagi komputer, tetapi tidak langsung memberi bentuk tertutup, nilai akhir, atau informasi kestabilan. Untuk itu diperlukan transformasi Z.
+
+\section{Definisi transformasi Z}
+Transformasi Z satu sisi barisan $x[k]$ didefinisikan sebagai
+\begin{equation}
+	X(z) = \mathcal{Z}\{x[k]\} = \sum_{k=0}^{\infty}x[k]\,z^{-k},
+\end{equation}
+dengan $z$ variabel kompleks dan deret konvergen untuk $|z| > R$ (\term{daerah konvergensi}{region of convergence}). Faktor $z^{-1}$ dapat dibaca sebagai operator tunda satu cacah. Hubungannya dengan Laplace sinyal tercacah adalah $z = e^{sT}$.
+
+\begin{contoh}[Deret geometri]
+	Untuk $x[k] = a^k$,
+	\[
+		X(z) = \sum_{k=0}^{\infty}(az^{-1})^k = \frac{1}{1-az^{-1}} = \frac{z}{z-a},\qquad |z| > |a|.
+	\]
+	Kasus khusus $a = 1$ memberi transformasi tangga satuan $z/(z-1)$, dan $a = e^{-\alpha T}$ memberi transformasi $e^{-\alpha t}$ yang dicacah.
+\end{contoh}
+
+Tabel~\ref{tab:b3-z} merangkum pasangan yang paling sering dipakai.
+
+\begin{table}[H]
+	\centering
+	\caption{Pasangan transformasi Z}
+	\label{tab:b3-z}
+	\renewcommand{\arraystretch}{2.1}
+	\begin{tabular}{@{}l l @{\qquad} l l@{}}
+		\toprule
+		$x[k]$ & $X(z)$ & $x(t)$ dicacah & $X(z)$ \\
+		\midrule
+		$\delta[k]$ & $1$ & $e^{-\alpha t}$ & $\dfrac{z}{z-e^{-\alpha T}}$ \\
+		$1[k]$ & $\dfrac{z}{z-1}$ & $t$ & $\dfrac{Tz}{(z-1)^2}$ \\
+		$k$ & $\dfrac{z}{(z-1)^2}$ & $\sin\omega t$ & $\dfrac{z\sin\omega T}{z^2-2z\cos\omega T+1}$ \\
+		$a^k$ & $\dfrac{z}{z-a}$ & $\cos\omega t$ & $\dfrac{z(z-\cos\omega T)}{z^2-2z\cos\omega T+1}$ \\
+		$ka^k$ & $\dfrac{az}{(z-a)^2}$ & $r^k\sin\theta k$ & $\dfrac{rz\sin\theta}{z^2-2rz\cos\theta+r^2}$ \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\section{Sifat-sifat}
+Sifat-sifat berikut menjadikan transformasi Z alat yang efektif untuk menyelesaikan persamaan beda.
+\begin{itemize}
+	\item \textbf{Linieritas}: $\mathcal{Z}\{\alpha x[k] + \beta y[k]\} = \alpha X(z) + \beta Y(z)$.
+	\item \textbf{Tunda}: $\mathcal{Z}\{x[k-n]\} = z^{-n}X(z)$ bila $x[k] = 0$ untuk $k < 0$.
+	\item \textbf{Maju}: $\mathcal{Z}\{x[k+1]\} = zX(z) - zx[0]$ dan $\mathcal{Z}\{x[k+2]\} = z^2X(z) - z^2x[0] - zx[1]$. Kondisi awal masuk melalui sifat ini.
+	\item \textbf{Skala}: $\mathcal{Z}\{a^kx[k]\} = X(z/a)$.
+	\item \textbf{Diferensiasi}: $\mathcal{Z}\{kx[k]\} = -z\frac{d}{dz}X(z)$.
+	\item \textbf{Konvolusi}: $\mathcal{Z}\big\{\sum_{j=0}^{k}x[j]y[k-j]\big\} = X(z)Y(z)$.
+	\item \textbf{Nilai awal}: $x[0] = \lim_{z\to\infty}X(z)$.
+	\item \textbf{Nilai akhir}: $\lim_{k\to\infty}x[k] = \lim_{z\to1}(z-1)X(z)$, \emph{hanya} bila semua kutub $(z-1)X(z)$ berada di dalam lingkaran satuan.
+\end{itemize}
+
+\begin{contoh}[Fungsi transfer dari persamaan beda]
+	Transformasi kedua ruas $y[k] = 0{,}8y[k-1] + 0{,}2u[k-1]$ dengan kondisi awal nol memberi $Y(z)(1 - 0{,}8z^{-1}) = 0{,}2z^{-1}U(z)$, sehingga
+	\[
+		\frac{Y(z)}{U(z)} = \frac{0{,}2}{z-0{,}8}.
+	\]
+	Untuk masukan tangga, $Y(z) = \dfrac{0{,}2z}{(z-0{,}8)(z-1)}$ dan nilai akhirnya $\lim_{z\to1}(z-1)Y(z) = 0{,}2/0{,}2 = 1$, sama dengan penguatan DC plant. Pecahan parsial $Y(z)/z = \frac{1}{z-1} - \frac{1}{z-0{,}8}$ memberi bentuk tertutup $y[k] = 1 - 0{,}8^k$.
+\end{contoh}
+
+\section{Transformasi Z invers}
+Ada tiga cara menghitung invers. \textbf{Pembagian panjang} membagi pembilang dengan penyebut dalam pangkat $z^{-1}$; koefisien $z^{-k}$ adalah $x[k]$. Cara ini cepat untuk beberapa sampel awal tetapi tidak memberi bentuk tertutup. \textbf{Pecahan parsial} menguraikan $X(z)/z$ menjadi suku-suku sederhana, mengalikannya kembali dengan $z$, lalu memakai tabel. Yang diuraikan adalah $X(z)/z$ karena tabel berbentuk $z/(z-a)$. \textbf{Integral inversi} memakai teorema residu, $x[k] = \sum\text{Res}[X(z)z^{k-1}]$, dan berguna untuk kutub berulang serta pembuktian.
+
+\begin{contoh}[Persamaan beda orde dua]
+	Selesaikan $y[k+2] - 0{,}7y[k+1] + 0{,}1y[k] = u[k]$ dengan kondisi awal nol dan $u$ tangga satuan.
+
+	\textit{Transformasi.} $(z^2 - 0{,}7z + 0{,}1)Y(z) = \dfrac{z}{z-1}$, dan karena $z^2 - 0{,}7z + 0{,}1 = (z-0{,}5)(z-0{,}2)$,
+	\[
+		Y(z) = \frac{z}{(z-1)(z-0{,}5)(z-0{,}2)}.
+	\]
+	\textit{Pecahan parsial.} $\dfrac{Y(z)}{z} = \dfrac{c_1}{z-1} + \dfrac{c_2}{z-0{,}5} + \dfrac{c_3}{z-0{,}2}$ dengan
+	\[
+		c_1 = \frac{1}{(0{,}5)(0{,}8)} = \frac52,\quad c_2 = \frac{1}{(-0{,}5)(0{,}3)} = -\frac{20}{3},\quad c_3 = \frac{1}{(-0{,}8)(-0{,}3)} = \frac{25}{6}.
+	\]
+	\textit{Invers.}
+	\[
+		y[k] = \frac52 - \frac{20}{3}(0{,}5)^k + \frac{25}{6}(0{,}2)^k.
+	\]
+	Rumus ini memberi $y = 0;\ 0;\ 1;\ 1{,}7;\ 2{,}09;\ 2{,}293;\ \dots$, sama persis dengan rekursi $y[k+2] = 0{,}7y[k+1] - 0{,}1y[k] + 1$. Nilai akhirnya $c_1 = 2{,}5$, sesuai teorema nilai akhir $\lim_{z\to1}(z-1)Y(z) = 1/(0{,}5 \cdot 0{,}8)$.
+
+	\textit{Pembagian panjang.} Dalam $z^{-1}$, $Y(z) = z^{-2}/(1 - 1{,}7z^{-1} + 0{,}8z^{-2} - 0{,}1z^{-3})$, dan pembagian memberi $z^{-2} + 1{,}7z^{-3} + 2{,}09z^{-4} + 2{,}293z^{-5} + \cdots$
+\end{contoh}
+
+\paragraph{Kutub kompleks dan berulang.} Pasangan kutub $z = re^{\pm j\theta}$ menghasilkan suku $Ar^k\cos(\theta k + \phi)$; pasangan sekawan digabung atau memakai baris terakhir Tabel~\ref{tab:b3-z}. Kutub berulang $(z-a)^2$ menghasilkan suku $ka^k$, dengan koefisien
+\[
+	c_{11} = \big[(z-a)^2X(z)/z\big]_{z=a},\qquad c_{12} = \frac{d}{dz}\big[(z-a)^2X(z)/z\big]_{z=a}.
+\]
+Secara umum, lokasi kutub menentukan bentuk respons: $|a| < 1$ meluruh, $|a| > 1$ membesar, dan $a < 0$ bergantian tanda. Hal ini dibahas lebih lanjut di Bab~\ref{bab:responsz}.
+
+\begin{catatan}
+	Perangkat lunak berguna untuk memeriksa hitungan tangan. Di MATLAB: \texttt{iztrans}, \texttt{residue}, dan \texttt{tf(num,den,T)} dengan \texttt{step}. Di Python: \texttt{sympy.apart(Y/z, z)} dan \texttt{control.tf(num, den, T)}.
+\end{catatan}
+
+\begin{ringkasan}
+	Persamaan beda adalah model yang dieksekusi kontroler digital. $X(z) = \sum x[k]z^{-k}$ dan $z^{-1}$ berarti tunda satu cacah. Invers dihitung dengan menguraikan $X(z)/z$ menjadi pecahan parsial. Nilai akhir adalah $\lim_{z\to1}(z-1)X(z)$ bila sistem stabil.\\[3pt]
+	\en{Difference equations are what digital controllers execute. The Z-transform turns them into algebra; partial fractions of $X(z)/z$ give closed-form solutions; the final value theorem applies only to stable signals.}
+\end{ringkasan}
+
+\paragraph{Istilah kunci.} persamaan beda \en{(difference equation)}, transformasi Z \en{(Z-transform)}, daerah konvergensi \en{(region of convergence)}, pecahan parsial \en{(partial fractions)}, pembagian panjang \en{(long division)}, teorema nilai akhir \en{(final value theorem)}.
+
+\section*{Latihan}
+\begin{enumerate}
+	\item Tentukan $\mathcal{Z}\{k(0{,}5)^k\}$ dengan sifat diferensiasi dan periksa dengan Tabel~\ref{tab:b3-z}.
+	\item Selesaikan $y[k] - 1{,}2y[k-1] + 0{,}32y[k-2] = u[k-1]$ untuk masukan impuls dengan kondisi awal nol.
+	\item Hitung invers $X(z) = \dfrac{z^2}{(z-1)(z-0{,}6)}$ dan nilai akhirnya.
+	\item Mengapa teorema nilai akhir tidak berlaku untuk $X(z) = z/(z-1{,}2)$?
+	\item Selesaikan $y[k+1] - 0{,}5y[k] = 1$ dengan $y[0] = 2$ menggunakan sifat maju.
+	\item Tentukan invers $X(z) = \dfrac{z}{z^2 - z + 0{,}5}$ dan nyatakan hasilnya dalam bentuk $Ar^k\sin(\theta k)$.
+\end{enumerate}

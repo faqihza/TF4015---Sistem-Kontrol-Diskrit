@@ -1,0 +1,152 @@
+\chapter{Emulasi dan PID Diskrit}
+\label{bab:emulasi}
+\enchap{Emulation and Discrete PID Control}
+
+\begin{tujuan}
+	Setelah mempelajari bab ini, Anda mampu mendiskritisasi pengontrol kontinu dengan berbagai metode, menjelaskan distorsi frekuensi Tustin dan \textit{prewarping}, menurunkan PID diskrit bentuk posisi dan kecepatan, menerapkan \textit{anti-windup} dan filter derivatif, serta menala PID diskrit secara heuristik.
+\end{tujuan}
+
+\section{Perancangan dengan emulasi}
+Emulasi berarti merancang pengontrol kontinu $C(s)$ dengan metode yang sudah dikenal, lalu mengubahnya menjadi pengontrol diskrit $D(z)$ dan memverifikasi hasilnya dengan model diskrit plant. Kelebihannya, seluruh pengalaman kontrol kontinu dapat dipakai. Kekurangannya, tunda ZOH $T/2$ diabaikan saat merancang $C(s)$, sehingga hasilnya hanya baik bila $T$ kecil ($\omega_s \gtrsim 20\omega_b$).
+
+\section{Metode diskritisasi}
+\subsection{Aproksimasi integrasi}
+Integrator $1/s$ dapat diganti dengan aturan integrasi numerik, yang setara dengan substitusi $s$ sebagai fungsi $z$:
+\begin{align}
+	\text{Euler maju:}\quad & s \leftarrow \frac{z-1}{T}, \\
+	\text{Euler mundur:}\quad & s \leftarrow \frac{z-1}{zT}, \\
+	\text{Tustin (bilinear):}\quad & s \leftarrow \frac{2}{T}\,\frac{z-1}{z+1}.
+\end{align}
+Ketiganya memetakan setengah bidang kiri bidang $s$ secara berbeda. Euler maju memetakannya ke setengah bidang $\text{Re}\,z < 1$, sehingga $C(s)$ yang stabil dapat menjadi $D(z)$ yang tidak stabil (misalnya $s = -50$ dengan $T = 0{,}05$\,s dipetakan ke $z = -1{,}5$). Euler mundur memetakannya ke lingkaran berpusat $0{,}5$ berjari-jari $0{,}5$, selalu stabil tetapi cenderung terlalu teredam. Tustin memetakan setengah bidang kiri tepat ke dalam lingkaran satuan, sehingga paling banyak dipakai.
+
+\subsection{Distorsi frekuensi dan \textit{prewarping}}
+Substitusi $z = e^{j\omega_dT}$ ke Tustin menghasilkan hubungan frekuensi
+\begin{equation}
+	\omega_c = \frac{2}{T}\tan\frac{\omega_dT}{2}.
+\end{equation}
+Seluruh sumbu $j\omega_c$ dimampatkan ke $0 \le \omega_d < \omega_N$. Distorsi kecil bila $\omega_d \ll \omega_N$. Agar satu frekuensi kritis $\omega_1$ (misalnya \textit{crossover} atau frekuensi \textit{notch}) dipetakan tepat, gunakan \textit{prewarping}:
+\begin{equation}
+	s \leftarrow \frac{\omega_1}{\tan(\omega_1T/2)}\,\frac{z-1}{z+1}.
+\end{equation}
+
+\subsection{\textit{Matched pole-zero}}
+Metode MPZ memetakan setiap kutub dan zero berhingga dengan $z = e^{sT}$, memetakan zero di tak hingga ke $z = -1$ (atau membiarkan satu tunda agar kausal-tegas), lalu menyamakan penguatan DC $D(1) = C(0)$.
+
+\begin{contoh}[Diskritisasi kompensator \textit{lead}]
+	$C(s) = 10(s+2)/(s+10)$ dengan $T = 0{,}05$\,s menghasilkan:
+	\begin{center}
+		\renewcommand{\arraystretch}{2.0}
+		\begin{tabular}{@{}l l@{}}
+			\toprule
+			Metode & $D(z)$ \\
+			\midrule
+			Euler maju & $\dfrac{10z - 9}{z - 0{,}5}$ \\
+			Euler mundur & $\dfrac{7{,}333z - 6{,}667}{z - 0{,}6667}$ \\
+			Tustin & $\dfrac{8{,}4z - 7{,}6}{z - 0{,}6}$ \\
+			MPZ & $8{,}269\,\dfrac{z - 0{,}9048}{z - 0{,}6065}$ \\
+			\bottomrule
+		\end{tabular}
+	\end{center}
+	Pada MPZ, zero $e^{-2T} = 0{,}9048$, kutub $e^{-10T} = 0{,}6065$, dan penguatan dari $D(1) = C(0) = 2$. Di bawah sekitar 5\,rad/s respons frekuensi keempatnya hampir sama; mendekati $\omega_N = 62{,}8$\,rad/s perbedaannya besar, terutama pada fasa. Tustin dan MPZ paling dekat dengan $C(s)$ di rentang kerja.
+\end{contoh}
+
+\section{PID diskrit}
+\subsection{Bentuk posisi}
+Dengan integral persegi mundur dan derivatif beda mundur, PID menjadi
+\begin{equation}
+	u[k] = K_p\Big[e[k] + \frac{T}{T_i}\sum_{j=0}^{k}e[j] + \frac{T_d}{T}\big(e[k]-e[k-1]\big)\Big],
+\end{equation}
+yang diimplementasikan secara rekursif dengan $I[k] = I[k-1] + \frac{K_pT}{T_i}e[k]$. Fungsi transfernya
+\begin{equation}
+	D(z) = K_p\left[1 + \frac{T}{T_i}\,\frac{z}{z-1} + \frac{T_d}{T}\,\frac{z-1}{z}\right].
+\end{equation}
+Integrator diskrit adalah kutub di $z = 1$. Perhatikan bahwa penguatan derivatif efektif $K_pT_d/T$ membesar bila $T$ kecil, sehingga derau ikut membesar.
+
+\subsection{Bentuk kecepatan}
+Mengurangkan $u[k-1]$ dari $u[k]$ menghasilkan bentuk inkremental
+\begin{equation}
+	\Delta u[k] = q_0e[k] + q_1e[k-1] + q_2e[k-2],
+\end{equation}
+\begin{equation}
+	q_0 = K_p\Big(1 + \frac{T}{T_i} + \frac{T_d}{T}\Big),\qquad q_1 = -K_p\Big(1 + \frac{2T_d}{T}\Big),\qquad q_2 = K_p\frac{T_d}{T},
+\end{equation}
+dengan $u[k] = u[k-1] + \Delta u[k]$. Contoh: $K_p = 2$, $T_i = 0{,}5$\,s, $T_d = 0{,}05$\,s, $T = 0{,}1$\,s memberi $q_0 = 3{,}4$, $q_1 = -4{,}0$, $q_2 = 1{,}0$. Bentuk kecepatan tidak memiliki akumulator eksplisit, memudahkan transfer manual--otomatis tanpa lonjakan, dan \textit{anti-windup} cukup dilakukan dengan membatasi $u[k]$.
+
+\subsection{PID praktis}
+Implementasi PID yang andal memerlukan beberapa modifikasi.
+\begin{enumerate}
+	\item \textbf{Filter derivatif}. $T_ds \rightarrow T_ds/(1 + T_ds/N)$; dengan Euler mundur dan $T_f = T_d/N$,
+	\[
+		D_f[k] = \frac{T_fD_f[k-1] + T_d\big(y[k]-y[k-1]\big)}{T_f + T}.
+	\]
+	\item \textbf{Derivatif pada pengukuran}: gunakan $-y$ alih-alih $e$ agar perubahan tangga \textit{setpoint} tidak menimbulkan lonjakan.
+	\item \textbf{Bobot \textit{setpoint}}: bagian proporsional memakai $\beta r - y$ dengan $0 \le \beta \le 1$.
+	\item \textbf{\textit{Anti-windup}}. Saat aktuator jenuh, integrator terus menumpuk galat sehingga menimbulkan lewatan besar. \textit{Clamping} menghentikan integrasi bila $u$ jenuh dan galat mendorong lebih jenuh; \textit{back-calculation} menambahkan $\frac{T}{T_t}(u_{\text{sat}} - u)$ ke integrator.
+	\item \textbf{Batas nilai dan laju} $u$ sesuai aktuator (kit: $-100$ hingga $100\%$).
+\end{enumerate}
+
+\begin{contoh}[\textit{Integrator windup}]
+	Plant kecepatan acuan dikontrol PI dengan $K_p = 3$, $T_i = 0{,}15$\,s, $T = 0{,}1$\,s, aktuator jenuh pada $|u| \le 1{,}2$, dan $r = 1$. Tanpa \textit{anti-windup}, $M_p \approx 19{,}6\%$ dan $t_s \approx 3{,}2$\,s. Dengan \textit{clamping}, $M_p \approx 0{,}3\%$ dan $t_s \approx 1{,}0$\,s (Gambar~\ref{fig:b5-windup}).
+\end{contoh}
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}
+		\begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.5cm},skd,width=7cm,height=4.6cm,xmin=0,xmax=6,xlabel={$t$ (s)}]
+			\nextgroupplot[ylabel={$y$},ymin=0,ymax=1.3,legend style={at={(0.98,0.05)},anchor=south east}]
+			\addplot[skdgray,dashed,thin,domain=0:6,forget plot] {1};
+			\addplot[skdred,const plot] table[x=t,y=yn] {\dat{p5_windup.dat}};
+			\addplot[skdblue,const plot] table[x=t,y=yc] {\dat{p5_windup.dat}};
+			\legend{tanpa AW, \textit{clamping}}
+			\nextgroupplot[ylabel={$u$},ymin=0,ymax=1.4]
+			\addplot[skdred,const plot] table[x=t,y=un] {\dat{p5_windup.dat}};
+			\addplot[skdblue,const plot] table[x=t,y=uc] {\dat{p5_windup.dat}};
+		\end{groupplot}
+	\end{tikzpicture}
+	\caption{Pengaruh \textit{anti-windup} pada PI dengan aktuator jenuh}
+	\label{fig:b5-windup}
+\end{figure}
+
+\begin{lstlisting}[language=C++,caption={PID diskrit dengan D pada pengukuran dan \textit{clamping}},label={lst:b5-pid}]
+float pid(float r, float y) {        // dipanggil tiap T
+  float e = r - y;
+  float P = Kp * e;
+  Df = (Tf*Df + Td*(y - yPrev)) / (Tf + T);
+  float D = -Kp * Df;                // D pada y
+  float v = P + I + D;
+  float u = constrain(v, -100, 100);
+  if (u == v || e*v < 0)             // clamping
+    I += Kp * T / Ti * e;
+  yPrev = y;
+  return u;
+}
+\end{lstlisting}
+
+\section{Penalaan heuristik PID diskrit}
+Karena ZOH menambah tunda sekitar $T/2$, tabel Ziegler--Nichols dan Cohen--Coon dipakai dengan tunda terkoreksi
+\begin{equation}
+	\theta' = \theta + \frac{T}{2}.
+\end{equation}
+
+\begin{contoh}[Koreksi tunda ZOH]
+	Untuk plant FOPDT Bab~1 dengan $T = 0{,}05$\,s, penalaan dengan $\theta = 0{,}3$\,s ($K_p = 3{,}00$, $T_i = 0{,}60$\,s) menghasilkan $M_p \approx 89\%$ dan respons belum masuk pita 2\% dalam 8\,s. Dengan $\theta' = 0{,}325$\,s ($K_p = 2{,}77$, $T_i = 0{,}65$\,s, $T_d = 0{,}163$\,s) diperoleh $M_p \approx 72\%$ dan $t_s \approx 6{,}0$\,s. Koreksi membantu, tetapi ZN tetap agresif sehingga penalaan halus tetap diperlukan.
+\end{contoh}
+
+Prosedur penalaan halus: mulai dari hasil tabel dengan $\theta'$; turunkan $K_p$ hingga lewatan sesuai spesifikasi; atur $T_i$ (kecilkan untuk menghilangkan galat lebih cepat, besarkan bila berosilasi); tambahkan $T_d$ secukupnya sambil memperhatikan derau pada $u$; uji perubahan \textit{setpoint} naik, turun, dan gangguan beban; catat $M_p$, $t_s$, $e_{ss}$, IAE, dan $u_{\max}$. Prosedur ini dipraktikkan pada Modul 2.
+
+\begin{ringkasan}
+	Emulasi: rancang $C(s)$, lalu diskritisasi dengan Tustin atau MPZ; valid bila $T$ kecil. Euler maju dapat menghasilkan $D(z)$ tidak stabil. PID diskrit tersedia dalam bentuk posisi dan kecepatan; filter derivatif, derivatif pada pengukuran, dan \textit{anti-windup} wajib dalam praktik. Untuk penalaan heuristik, tambahkan $T/2$ pada tunda plant.\\[3pt]
+	\en{Emulation discretises a continuous design (Tustin or matched pole-zero preferred). Discrete PID comes in position and velocity forms; practical PID needs derivative filtering, derivative on measurement, and anti-windup. Add $T/2$ to the process delay when using tuning tables.}
+\end{ringkasan}
+
+\paragraph{Istilah kunci.} emulasi \en{(emulation)}, transformasi bilinear (Tustin), \textit{prewarping}, \textit{matched pole-zero}, bentuk posisi/kecepatan \en{(position/velocity form)}, \textit{integrator windup}, \textit{anti-windup}, penalaan halus \en{(fine tuning)}.
+
+\section*{Latihan}
+\begin{enumerate}
+	\item Diskritisasi $C(s) = 5(s+1)/(s+20)$ dengan Tustin dan MPZ untuk $T = 0{,}02$\,s, lalu bandingkan respons frekuensinya.
+	\item Turunkan $q_0$, $q_1$, $q_2$ bentuk kecepatan dari bentuk posisi.
+	\item Tunjukkan bahwa Euler maju memetakan $s = -50$ ke luar lingkaran satuan bila $T = 0{,}05$\,s.
+	\item Turunkan rumus \textit{prewarping} dan terapkan untuk filter \textit{notch} 50\,Hz dengan $T = 1$\,ms.
+	\item Simulasikan PI pada plant kecepatan dengan saturasi $|u| \le 1{,}2$, dengan dan tanpa \textit{anti-windup}.
+	\item Mengapa penguatan derivatif efektif membesar bila $T$ dikecilkan, dan bagaimana filter derivatif mengatasinya?
+\end{enumerate}

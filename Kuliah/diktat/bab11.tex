@@ -1,0 +1,105 @@
+\chapter{Penempatan Kutub dengan Umpan Balik Keadaan}
+\label{bab:pp}
+\enchap{Pole Placement by State Feedback}
+
+\begin{tujuan}
+	Setelah mempelajari bab ini, Anda mampu merancang umpan balik keadaan untuk menempatkan kutub kalang tertutup, menghitung penguatan dengan pencocokan koefisien dan formula Ackermann, memilih lokasi kutub dari spesifikasi, serta menambahkan penguatan referensi dan aksi integral.
+\end{tujuan}
+
+\section{Umpan balik keadaan}
+Dengan hukum kontrol $u[k] = -K\mathbf{x}[k] + \bar Nr[k]$, $K = [k_1\ \cdots\ k_n]$, sistem kalang tertutup menjadi
+\begin{equation}
+	\mathbf{x}[k+1] = (\Phi - \Gamma K)\mathbf{x}[k] + \Gamma\bar Nr[k],
+\end{equation}
+dengan kutub akar $\det(zI - \Phi + \Gamma K) = 0$. Semua $n$ kutub dapat ditempatkan di lokasi mana pun (dengan pasangan sekawan untuk kutub kompleks) jika dan hanya jika $(\Phi, \Gamma)$ terkendali.
+
+\section{Menghitung penguatan}
+\paragraph{Pencocokan koefisien.} Dari kutub yang diinginkan $z_1, \dots, z_n$ dibentuk polinomial karakteristik
+\begin{equation}
+	\alpha_c(z) = \prod_{i=1}^{n}(z - z_i) = z^n + \alpha_1z^{n-1} + \dots + \alpha_n.
+\end{equation}
+Menyamakan koefisien $\det(zI - \Phi + \Gamma K)$ dengan $\alpha_c(z)$ menghasilkan $n$ persamaan linier untuk $k_i$. Cara ini praktis untuk orde dua atau tiga.
+
+\paragraph{Formula Ackermann.}
+\begin{equation}
+	K = \begin{bmatrix}0 & \cdots & 0 & 1\end{bmatrix}W_c^{-1}\,\alpha_c(\Phi),\qquad \alpha_c(\Phi) = \Phi^n + \alpha_1\Phi^{n-1} + \dots + \alpha_nI.
+\end{equation}
+Di MATLAB tersedia \texttt{acker} dan \texttt{place}; yang terakhir lebih stabil secara numerik. Di Python: \texttt{control.acker} dan \texttt{control.place}.
+
+\section{Memilih lokasi kutub}
+Pasangan kutub dominan ditentukan dari $\zeta$ dan $\omega_n$ (atau $M_p$ dan $t_s$), lalu dipetakan dengan $z_i = e^{s_iT}$. Kutub tambahan dibuat 2--5 kali lebih cepat (jari-jari lebih kecil), tetapi tidak berlebihan. Memindahkan kutub jauh dari kutub kalang terbuka memerlukan penguatan besar, sehingga aktuator dapat jenuh, derau sensor diperkuat, dan sistem menjadi peka terhadap galat model. Prinsipnya: pindahkan kutub hanya sejauh yang diperlukan spesifikasi, dan selalu periksa usaha kontrol untuk perubahan \textit{setpoint} terbesar.
+
+\begin{contoh}[Kontrol posisi motor]
+	Model Bab~\ref{bab:ss}: $\Phi = \begin{bmatrix}1 & 0{,}09063\\ 0 & 0{,}81873\end{bmatrix}$, $\Gamma = \begin{bmatrix}0{,}00937\\ 0{,}18127\end{bmatrix}$. Spesifikasi $\zeta = 0{,}7$ dan $\omega_n = 4$ rad/s ($M_p \approx 4{,}6\%$, $t_s \approx 1{,}4$\,s) memberi
+	\[
+		s = -2{,}8 \pm j2{,}857\ \Rightarrow\ z = 0{,}7252 \pm j0{,}2130,\qquad \alpha_c(z) = z^2 - 1{,}45031z + 0{,}57121.
+	\]
+	Formula Ackermann menghasilkan $K = [6{,}669\ \ 1{,}688]$, sehingga $u = -6{,}669\theta - 1{,}688\omega + \bar Nr$. Hukum kontrol ini adalah kontrol PD pada posisi dengan kecepatan yang diukur langsung, bukan diturunkan dari posisi.
+\end{contoh}
+
+\section{Penguatan referensi}
+Agar $y \to r$ dalam keadaan tunak, dari $\mathbf{x}_{ss} = (\Phi - \Gamma K)\mathbf{x}_{ss} + \Gamma\bar Nr$ diperoleh
+\begin{equation}
+	\bar N = \frac{1}{C(I - \Phi + \Gamma K)^{-1}\Gamma}.
+\end{equation}
+Untuk contoh di atas $\bar N = 6{,}669 = k_1$; karena plant tipe 1, hukum kontrolnya dapat ditulis $u = k_1(r - \theta) - k_2\omega$. Kelemahan $\bar N$ adalah ketergantungannya pada model: gangguan beban atau galat model menimbulkan galat tunak. Solusinya adalah aksi integral.
+
+\section{Aksi integral}
+Tambahkan keadaan integrator $x_I[k+1] = x_I[k] + (r[k] - y[k])$, sehingga sistem diperbesar menjadi
+\begin{equation}
+	\begin{bmatrix}\mathbf{x}\\ x_I\end{bmatrix}[k+1] = \underbrace{\begin{bmatrix}\Phi & 0\\ -C & 1\end{bmatrix}}_{\Phi_a}\begin{bmatrix}\mathbf{x}\\ x_I\end{bmatrix}[k] + \underbrace{\begin{bmatrix}\Gamma\\ 0\end{bmatrix}}_{\Gamma_a}u[k] + \begin{bmatrix}0\\ 1\end{bmatrix}r[k],
+\end{equation}
+dengan $u = -K_a[\mathbf{x}^\top\ x_I]^\top$ dan $K_a$ diperoleh dari penempatan kutub pada $(\Phi_a, \Gamma_a)$.
+
+\begin{contoh}[Kontrol posisi dengan aksi integral]
+	Dengan kutub $0{,}7252 \pm j0{,}2130$ dan kutub tambahan $e^{-4{,}2T} = 0{,}657$, diperoleh $K_a = [15{,}887\ \ 3{,}104\ \ -2{,}287]$, yaitu $u = -15{,}887\theta - 3{,}104\omega + 2{,}287x_I$. Simulasi dengan tangga $r = 1$ dan gangguan masukan $-0{,}3$ mulai $t = 4$\,s (Gambar~\ref{fig:b11-pp}) menunjukkan bahwa tanpa integral keluaran akhir hanya $0{,}955$, sedangkan dengan integral kembali ke $1{,}000$. Lewatan dan waktu turun masing-masing $4{,}6\%$ dan 1,5\,s tanpa integral, serta $1{,}8\%$ dan 1,3\,s dengan integral, dengan harga aksi awal yang lebih besar ($u[0] = 15{,}9$ dibanding 6,7). Gunakan \textit{anti-windup} pada $x_I$ bila aktuator jenuh.
+\end{contoh}
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}
+		\begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.5cm},skd,width=7cm,height=4.8cm,xmin=0,xmax=8,xlabel={$t$ (s)}]
+			\nextgroupplot[ylabel={$\theta$},ymin=0,ymax=1.15,legend style={at={(0.98,0.05)},anchor=south east}]
+			\addplot[skdgray,dashed,thin,domain=0:8,forget plot] {1};
+			\addplot[skdorange,const plot] table[x=t,y=y1] {\dat{p12_pp.dat}};
+			\addplot[skdblue,const plot] table[x=t,y=y2] {\dat{p12_pp.dat}};
+			\legend{$K + \bar N$, $K_a$ (integral)}
+			\nextgroupplot[ylabel={$u$},ymin=-1,ymax=16]
+			\addplot[skdorange,const plot] table[x=t,y=u1] {\dat{p12_pp.dat}};
+			\addplot[skdblue,const plot] table[x=t,y=u2] {\dat{p12_pp.dat}};
+		\end{groupplot}
+	\end{tikzpicture}
+	\caption{Penempatan kutub dengan dan tanpa aksi integral; gangguan beban mulai $t = 4$\,s}
+	\label{fig:b11-pp}
+\end{figure}
+
+\section{\textit{Deadbeat} dengan umpan balik keadaan}
+Menempatkan semua kutub di $z = 0$ ($\alpha_c(z) = z^n$) membuat $(\Phi - \Gamma K)^n = 0$, sehingga keadaan apa pun mencapai nol dalam paling banyak $n$ cacah. Untuk motor posisi, $K_{db} = [55{,}17\ \ 7{,}18]$; untuk $\theta$ awal 1 rad, $u[0] = -55$, jauh di luar batas aktuator. \textit{Deadbeat} adalah batas ekstrem penempatan kutub: waktu respons $nT$ dipaksakan oleh $T$, bukan oleh plant.
+
+\begin{lstlisting}[language=C++,caption={Umpan balik keadaan dengan aksi integral pada kit},label={lst:b11-pp}]
+float th = posisi_rad();              // potensiometer
+float w  = kecepatan_rad_s();         // tachometer
+xI += (r - th);
+float u  = -K1*th - K2*w - KI*xI;     // KI = Ka[2]
+float us = constrain(u, -UMAX, UMAX);
+if (us != u) xI -= (r - th);          // anti-windup
+run_motor(us);
+\end{lstlisting}
+
+Satuan keadaan harus konsisten dengan model, kompensasi \textit{deadzone} tetap diperlukan agar plant mendekati linier, dan karena tachometer berderau serta terfilter, alternatif yang lebih baik adalah pengamat keadaan (Bab~\ref{bab:obs}).
+
+\begin{ringkasan}
+	Dengan $u = -K\mathbf{x}$, kutub kalang tertutup adalah nilai eigen $\Phi - \Gamma K$. Formula Ackermann: $K = [0\ \cdots\ 1]W_c^{-1}\alpha_c(\Phi)$. Kutub dipilih dari spesifikasi dengan $z = e^{sT}$ dan tidak dibuat terlalu cepat. Aksi integral menghilangkan galat akibat gangguan dan galat model.\\[3pt]
+	\en{State feedback places the eigenvalues of $\Phi - \Gamma K$; Ackermann's formula gives $K$; choose poles from specifications via $z = e^{sT}$ without moving them further than needed; integral action removes steady-state error due to disturbances.}
+\end{ringkasan}
+
+\paragraph{Istilah kunci.} umpan balik keadaan \en{(state feedback)}, penempatan kutub \en{(pole placement)}, formula Ackermann, polinomial karakteristik \en{(characteristic polynomial)}, penguatan referensi \en{(reference gain)}, aksi integral \en{(integral action)}.
+
+\section*{Latihan}
+\begin{enumerate}
+	\item Hitung $K$ contoh di atas dengan pencocokan koefisien dan bandingkan dengan hasil Ackermann.
+	\item Rancang $K$ untuk $\zeta = 0{,}8$ dan $t_s = 1$\,s; hitung $u[0]$ untuk $r = 1$.
+	\item Turunkan $\bar N$ dan tunjukkan bahwa $\bar N = k_1$ untuk plant tipe 1.
+	\item Simulasikan $K_a$ dengan batas $|u| \le 5$, dengan dan tanpa \textit{anti-windup}.
+	\item Rancang $K$ untuk model tiga keadaan (dengan filter tachometer) dari Latihan Bab~\ref{bab:ss}.
+\end{enumerate}

@@ -1,0 +1,142 @@
+\documentclass[11pt,a4paper,oneside]{book}
+\usepackage[top=2.8cm,bottom=2.8cm,left=3cm,right=2.6cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx}
+\usepackage{booktabs,array,tabularx,longtable}
+\usepackage{enumitem}
+\usepackage[table]{xcolor}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.17}
+\usepgfplotslibrary{groupplots}
+\usetikzlibrary{arrows.meta,positioning,calc,fit}
+\usepackage{listings}
+\usepackage[most]{tcolorbox}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{xurl}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black,citecolor=blue!50!black]{hyperref}
+
+% ---------------------------------------------------------------------------
+% Istilah Bahasa Indonesia
+% ---------------------------------------------------------------------------
+\renewcommand{\contentsname}{Daftar Isi}
+\renewcommand{\chaptername}{Bab}
+\renewcommand{\figurename}{Gambar}
+\renewcommand{\tablename}{Tabel}
+\renewcommand{\bibname}{Daftar Pustaka}
+\renewcommand{\appendixname}{Lampiran}
+\renewcommand{\lstlistingname}{Kode}
+
+% ---------------------------------------------------------------------------
+% Warna dan kotak
+% ---------------------------------------------------------------------------
+\definecolor{skdblue}{HTML}{1F3A68}
+\definecolor{skdlight}{HTML}{E8EEF7}
+\definecolor{skdorange}{HTML}{D9822B}
+\definecolor{skdgreen}{HTML}{2E8B57}
+\definecolor{skdred}{HTML}{B03A2E}
+\definecolor{skdgray}{HTML}{6B7280}
+
+\newcommand{\en}[1]{{\color{skdgray}\textit{#1}}}
+\newcommand{\term}[2]{\textbf{#1} \en{(#2)}}
+\newcommand{\enchap}[1]{\vspace*{-1.2em}{\Large\en{#1}}\par\vspace{1.5em}}
+
+\newtcolorbox{tujuan}{colback=skdlight,colframe=skdblue,fonttitle=\bfseries,title={Tujuan Pembelajaran \en{\color{white!85!skdblue}/ Learning Objectives}},boxrule=0.6pt,arc=2pt}
+\newtcolorbox[auto counter,number within=chapter]{contoh}[1][]{colback=skdgreen!6,colframe=skdgreen,fonttitle=\bfseries,title={Contoh~\thetcbcounter\ifx&#1&\else: #1\fi},boxrule=0.6pt,arc=2pt,breakable}
+\newtcolorbox{ringkasan}{colback=skdorange!7,colframe=skdorange,fonttitle=\bfseries,title={Ringkasan \en{\color{white!85!skdorange}/ Summary}},boxrule=0.6pt,arc=2pt,breakable}
+\newtcolorbox{catatan}{colback=white,colframe=skdgray,fonttitle=\bfseries,title={Catatan praktik},boxrule=0.5pt,arc=2pt,breakable}
+
+\pgfplotsset{
+	skd/.style={axis lines=left,grid=major,grid style={black!10},tick label style={font=\scriptsize},label style={font=\small},legend style={font=\scriptsize,draw=none,fill=white,fill opacity=0.85,text opacity=1},every axis plot/.append style={thick}},
+}
+\tikzset{
+	blk/.style={draw=skdblue,thick,fill=white,rounded corners=2pt,minimum height=0.9cm,minimum width=1.5cm,align=center,font=\small},
+	blkd/.style={blk,fill=skdlight},
+	sum/.style={draw=skdblue,thick,circle,inner sep=0pt,minimum size=0.45cm},
+	sig/.style={-{Stealth[length=2.2mm]},thick,skdblue},
+	lbl/.style={font=\scriptsize,text=skdgray},
+}
+
+\lstset{basicstyle=\ttfamily\footnotesize,keywordstyle=\color{blue!70!black}\bfseries,commentstyle=\color{green!45!black},frame=single,breaklines=true,columns=fullflexible,keepspaces=true,showstringspaces=false}
+
+\newcommand{\dat}[1]{../slides/data/#1}
+
+% ---------------------------------------------------------------------------
+% Header
+% ---------------------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\nouppercase{\leftmark}}
+\fancyhead[R]{\small TF4015 Sistem Kontrol Diskrit}
+\fancyfoot[C]{\thepage}
+\setlength{\headheight}{14pt}
+\setlist{itemsep=2pt,topsep=4pt}
+
+\begin{document}
+
+\frontmatter
+\begin{titlepage}
+	\centering
+	\vspace*{2cm}
+	{\large Program Studi Teknik Fisika\\Fakultas Teknologi Industri\\Institut Teknologi Bandung\par}
+	\vspace{3cm}
+	{\color{skdblue}\rule{0.85\textwidth}{1.2pt}\par}
+	\vspace{0.5cm}
+	{\Huge\bfseries Sistem Kontrol Diskrit\par}
+	\vspace{0.3cm}
+	{\LARGE\en{Discrete-Time Control Systems}\par}
+	\vspace{0.4cm}
+	{\large Catatan Kuliah TF4015 \,/\, \en{Lecture Notes}\par}
+	\vspace{0.5cm}
+	{\color{skdblue}\rule{0.85\textwidth}{1.2pt}\par}
+	\vfill
+	{\large Ir. Estiyanti Ekawati, M.T., Ph.D.\\[2pt] Faqihza Mukhlish, S.T., M.T., Ph.D.\par}
+	\vspace{1.5cm}
+	{\large Semester I 2026/2027\par}
+\end{titlepage}
+
+\chapter*{Prakata}
+Catatan kuliah ini menyertai mata kuliah TF4015 Sistem Kontrol Diskrit (3 SKS). Isinya mengikuti Rencana Pembelajaran Semester: satu bab untuk setiap pertemuan tatap muka, dengan Pertemuan 8 dan 16 dipakai untuk ujian. Catatan ini tidak menggantikan buku teks; tujuannya merangkum konsep inti, menunjukkan penurunan yang penting, dan memberi contoh numerik yang konsisten dengan slide kuliah dan modul praktikum.
+
+Sepanjang catatan dipakai satu plant acuan yang sama dengan kit praktikum, yaitu motor DC yang dinormalisasi:
+\[
+	G_v(s) = \frac{K}{\tau s + 1}\ \text{(kecepatan)},\qquad G_p(s) = \frac{K}{s(\tau s+1)}\ \text{(posisi)},
+\]
+dengan $K = 1$, $\tau = 0{,}5$\,s, dan waktu cacah $T = 0{,}1$\,s, kecuali disebutkan lain. Dengan demikian setiap metode dapat dibandingkan pada sistem yang sama. Semua angka contoh dan grafik dihitung dengan skrip Python yang disertakan bersama slide (\texttt{scripts/gen\_data.py}).
+
+Bahasa pengantar adalah Bahasa Indonesia. Istilah teknis diberi padanan bahasa Inggris \en{(dalam huruf miring abu-abu)} saat pertama kali muncul, dan setiap bab ditutup dengan ringkasan, daftar istilah kunci, serta latihan.
+
+\paragraph{Buku teks.}
+\begin{itemize}
+	\item[{[FR]}] Franklin, G.~F., Powell, J.~D., dan Emami-Naeini, A., \textit{Feedback Control of Dynamic Systems}, ed.~8, Pearson, 2018.
+	\item[{[OG]}] Ogata, K., \textit{Discrete-Time Control Systems}, ed.~2, Pearson India, 2015.
+	\item[{[PH]}] Phillips, C.~L., Nagle, H.~T., dan Chakrabortty, A., \textit{Digital Control System Analysis \& Design}, ed.~4, Pearson, 2014.
+\end{itemize}
+
+\tableofcontents
+
+\mainmatter
+\include{bab01}
+\include{bab02}
+\include{bab03}
+\include{bab04}
+\include{bab05}
+\include{bab06}
+\include{bab07}
+\include{bab08}
+\include{bab09}
+\include{bab10}
+\include{bab11}
+\include{bab12}
+\include{bab13}
+\include{bab14}
+
+\backmatter
+\include{glosarium}
+
+\end{document}

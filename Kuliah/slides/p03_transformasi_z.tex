@@ -1,0 +1,412 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{skd}
+
+\title[Pertemuan 3 -- Transformasi Z]{Persamaan Beda dan Transformasi Z}
+\subtitle{Difference Equations and the Z-Transform}
+\author{Ir. Estiyanti Ekawati, M.T., Ph.D. \quad\textbar\quad Faqihza Mukhlish, S.T., M.T., Ph.D.}
+\institute{Program Studi Teknik Fisika, Fakultas Teknologi Industri, Institut Teknologi Bandung}
+\date{Pertemuan 3 \textbar\ Semester I 2026/2027}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+	\titlepage
+\end{frame}
+
+\begin{frame}{Tujuan pertemuan}
+	\framesubtitle{Learning objectives}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{enumerate}
+				\item Menulis model sistem diskrit sebagai \term{persamaan beda}{difference equation}.
+				\item Menghitung transformasi Z sinyal dasar dan memakai sifat-sifatnya.
+				\item Menghitung transformasi Z invers dengan pembagian panjang dan pecahan parsial.
+				\item Menyelesaikan persamaan beda dan menghitung nilai akhir.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\begin{block}{Sub-CPMK S3}
+				\small Memodelkan sistem diskrit dengan persamaan beda dan menyelesaikannya menggunakan transformasi Z.\\[3pt]
+				\en{Model discrete-time systems with difference equations and solve them using the Z-transform.}
+			\end{block}
+			{\small Bacaan: [OG] Bab 2; [PH] Bab 2; [FR] 8.2}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Persamaan Beda\texorpdfstring{\\[4pt]{\Large\en{Difference Equations}}}{ / Difference Equations}}
+% ===========================================================================
+
+\begin{frame}{Dari persamaan diferensial ke persamaan beda}
+	\framesubtitle{From differential to difference equations}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			Plant kecepatan: $\tau\dot y + y = Ku$. Turunan didekati dengan beda maju:
+			\[
+				\dot y(kT) \approx \frac{y[k+1]-y[k]}{T}
+			\]
+			sehingga
+			\[
+				y[k+1] = \Big(1-\frac{T}{\tau}\Big)y[k] + \frac{KT}{\tau}u[k]
+			\]
+			Dengan $T=0{,}1$, $\tau=0{,}5$, $K=1$: $y[k+1] = 0{,}8\,y[k] + 0{,}2\,u[k]$.
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\small
+			Bentuk umum persamaan beda linier orde $n$:
+			\begin{align*}
+				&y[k] + a_1y[k-1] + \dots + a_ny[k-n]\\
+				&\quad = b_0u[k] + \dots + b_mu[k-m]
+			\end{align*}
+			\begin{itemize}
+				\item Rekursif: keluaran baru dari keluaran lama dan masukan.
+				\item Itulah yang dieksekusi \texttt{loop()} mikrokontroler setiap $T$.
+			\end{itemize}
+			\kunci{Pendekatan Euler ini hanya aproksimasi; ekuivalen eksak dengan ZOH memberi $0{,}8187$ dan $0{,}1813$ (Pertemuan 4).}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Menyelesaikan persamaan beda dengan rekursi}
+	\framesubtitle{Solving by recursion}
+	\begin{columns}[c]
+		\begin{column}{0.48\textwidth}
+			\small
+			$y[k] = 0{,}8\,y[k-1] + 0{,}2\,u[k-1]$, $y[0]=0$, $u[k]=1$:
+			\renewcommand{\arraystretch}{1.15}
+			\begin{tabular}{@{}c c c c c c c@{}}
+				\toprule
+				$k$ & 0 & 1 & 2 & 3 & 4 & 5 \\
+				\midrule
+				$y[k]$ & 0 & 0,2 & 0,36 & 0,488 & 0,590 & 0,672 \\
+				\bottomrule
+			\end{tabular}
+
+			\vspace{0.2cm}
+			Rekursi mudah dihitung komputer, tetapi tidak memberi \textbf{bentuk tertutup} $y[k]=1-0{,}8^k$, nilai akhir, atau informasi kestabilan secara langsung.\\[3pt]
+			$\Rightarrow$ perlu \textbf{transformasi Z}.
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=7cm,height=4.8cm,xmin=-0.5,xmax=14.5,ymin=0,ymax=1.1,xlabel={$k$},ylabel={$y[k]$}]
+					\addplot[skdgray,dashed,thin,domain=0:14.5] {1};
+					\addplot[skdblue,ycomb,mark=*,mark size=1.4pt] table[x=k,y=y] {data/p3_first.dat};
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Transformasi Z\texorpdfstring{\\[4pt]{\Large\en{The Z-Transform}}}{ / The Z-Transform}}
+% ===========================================================================
+
+\begin{frame}{Definisi}
+	\framesubtitle{Definition}
+	\begin{block}{Transformasi Z satu sisi}
+		\[
+			X(z) = \mathcal{Z}\{x[k]\} = \sum_{k=0}^{\infty} x[k]\,z^{-k}
+		\]
+	\end{block}
+	\begin{itemize}
+		\item $z$ variabel kompleks; deret konvergen untuk $|z| > R$ (\term{daerah konvergensi}{region of convergence}).
+		\item Hubungan dengan Laplace sinyal tercacah: $z = e^{sT}$ (Pertemuan 2).
+		\item $z^{-1}$ dapat dibaca sebagai \textbf{operator tunda satu cacah}.
+	\end{itemize}
+	\vspace{0.1cm}
+	\begin{exampleblock}{Contoh: deret geometri}
+		\small
+		$x[k] = a^k$: \quad $X(z) = \sum_{k\ge0} (az^{-1})^k = \dfrac{1}{1-az^{-1}} = \dfrac{z}{z-a}$, \quad konvergen untuk $|z|>|a|$.
+	\end{exampleblock}
+\end{frame}
+
+\begin{frame}{Tabel transformasi Z}
+	\framesubtitle{Table of Z-transforms}
+	\small
+	\renewcommand{\arraystretch}{2.4}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\begin{tabular}{@{}l l@{}}
+				\toprule
+				$x[k]$ & $X(z)$ \\
+				\midrule
+				$\delta[k]$ (impuls) & $1$ \\
+				$1[k]$ (tangga) & $\dfrac{z}{z-1}$ \\
+				$k$ & $\dfrac{z}{(z-1)^2}$ \\
+				$a^k$ & $\dfrac{z}{z-a}$ \\
+				$k\,a^{k}$ & $\dfrac{az}{(z-a)^2}$ \\
+				\bottomrule
+			\end{tabular}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{tabular}{@{}l l@{}}
+				\toprule
+				$x(t)$, dicacah $t=kT$ & $X(z)$ \\
+				\midrule
+				$e^{-\alpha t}$ & $\dfrac{z}{z-e^{-\alpha T}}$ \\
+				$t$ & $\dfrac{Tz}{(z-1)^2}$ \\
+				$\sin\omega t$ & $\dfrac{z\sin\omega T}{z^2-2z\cos\omega T+1}$ \\
+				$\cos\omega t$ & $\dfrac{z(z-\cos\omega T)}{z^2-2z\cos\omega T+1}$ \\
+				\bottomrule
+			\end{tabular}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Sifat-sifat penting}
+	\framesubtitle{Key properties}
+	\small
+	\renewcommand{\arraystretch}{1.3}
+	\begin{tabular}{@{}l l l@{}}
+		\toprule
+		\textbf{Sifat} & \textbf{Domain waktu} & \textbf{Domain $z$} \\
+		\midrule
+		Linieritas & $\alpha x[k] + \beta y[k]$ & $\alpha X(z) + \beta Y(z)$ \\
+		Tunda \en{(delay)} & $x[k-n]$, $x[k]=0$ untuk $k<0$ & $z^{-n}X(z)$ \\
+		Maju \en{(advance)} & $x[k+1]$ & $zX(z) - z\,x[0]$ \\
+		 & $x[k+2]$ & $z^2X(z) - z^2x[0] - z\,x[1]$ \\
+		Skala & $a^k x[k]$ & $X(z/a)$ \\
+		Konvolusi & $\sum_{j=0}^{k} x[j]\,y[k-j]$ & $X(z)\,Y(z)$ \\
+		Nilai awal & $x[0]$ & $\lim_{z\to\infty} X(z)$ \\
+		Nilai akhir & $\lim_{k\to\infty} x[k]$ & $\lim_{z\to 1}(z-1)X(z)$ \\
+		\bottomrule
+	\end{tabular}
+
+	\vspace{0.2cm}
+	\kunci{Teorema nilai akhir hanya berlaku bila semua kutub $(z-1)X(z)$ berada \textbf{di dalam} lingkaran satuan.}
+\end{frame}
+
+\begin{frame}{Contoh: menurunkan dengan sifat tunda}
+	\framesubtitle{Example using the delay property}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			$y[k] = 0{,}8\,y[k-1] + 0{,}2\,u[k-1]$, kondisi awal nol.\\[3pt]
+			Transformasi kedua ruas:
+			\[
+				Y(z) = 0{,}8z^{-1}Y(z) + 0{,}2z^{-1}U(z)
+			\]
+			\[
+				\frac{Y(z)}{U(z)} = \frac{0{,}2z^{-1}}{1-0{,}8z^{-1}} = \frac{0{,}2}{z-0{,}8}
+			\]
+			Rasio ini adalah \term{fungsi transfer pulsa}{pulse transfer function}; kutubnya $z=0{,}8$.
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\small
+			Masukan tangga $U(z) = z/(z-1)$:
+			\[
+				Y(z) = \frac{0{,}2z}{(z-0{,}8)(z-1)}
+			\]
+			Nilai akhir:
+			\[
+				\lim_{z\to1}(z-1)Y(z) = \frac{0{,}2}{1-0{,}8} = 1
+			\]
+			Sesuai dengan penguatan DC plant $K=1$.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Transformasi Z Invers\texorpdfstring{\\[4pt]{\Large\en{The Inverse Z-Transform}}}{ / The Inverse Z-Transform}}
+% ===========================================================================
+
+\begin{frame}{Tiga cara menghitung invers}
+	\framesubtitle{Three methods}
+	\begin{columns}[T]
+		\begin{column}{0.32\textwidth}
+			\begin{block}{1. Pembagian panjang}
+				\small
+				Bagi pembilang dengan penyebut dalam pangkat $z^{-1}$. Koefisien $z^{-k}$ = $x[k]$.\\[2pt]
+				Cepat untuk beberapa sampel awal; tidak memberi bentuk tertutup.
+			\end{block}
+		\end{column}
+		\begin{column}{0.32\textwidth}
+			\begin{block}{2. Pecahan parsial}
+				\small
+				Uraikan $X(z)/z$ (bukan $X(z)$!) menjadi suku sederhana, kalikan kembali dengan $z$, lalu pakai tabel.\\[2pt]
+				Metode utama di kuliah ini.
+			\end{block}
+		\end{column}
+		\begin{column}{0.32\textwidth}
+			\begin{block}{3. Integral inversi}
+				\small
+				$x[k] = \sum \text{Res}\big[X(z)z^{k-1}\big]$ pada semua kutub.\\[2pt]
+				Berguna untuk kutub berulang dan pembuktian.
+			\end{block}
+		\end{column}
+	\end{columns}
+	\vspace{0.3cm}
+	\small Mengapa $X(z)/z$? Karena tabel berbentuk $\dfrac{z}{z-a}$; menguraikan $X(z)/z$ menghasilkan suku $\dfrac{c}{z-a}$ yang setelah dikali $z$ langsung cocok dengan tabel.
+\end{frame}
+
+\begin{frame}{Contoh lengkap: persamaan beda orde 2}
+	\framesubtitle{Worked example: second-order difference equation}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			$y[k+2] - 0{,}7y[k+1] + 0{,}1y[k] = u[k]$, KA nol, $u$ tangga.\\[3pt]
+			\textbf{1. Transformasi}: $(z^2 - 0{,}7z + 0{,}1)Y(z) = \dfrac{z}{z-1}$
+			\[
+				Y(z) = \frac{z}{(z-1)(z-0{,}5)(z-0{,}2)}
+			\]
+			\textbf{2. Pecahan parsial} dari $Y(z)/z$:
+			\[
+				\frac{Y(z)}{z} = \frac{c_1}{z-1} + \frac{c_2}{z-0{,}5} + \frac{c_3}{z-0{,}2}
+			\]
+			$c_1 = \frac{1}{(0{,}5)(0{,}8)} = \frac{5}{2}$,\ \
+			$c_2 = \frac{1}{(-0{,}5)(0{,}3)} = -\frac{20}{3}$,\ \
+			$c_3 = \frac{1}{(-0{,}8)(-0{,}3)} = \frac{25}{6}$
+		\end{column}
+		\begin{column}{0.45\textwidth}
+			\small
+			\textbf{3. Invers}:
+			\[
+				y[k] = \tfrac{5}{2} - \tfrac{20}{3}(0{,}5)^k + \tfrac{25}{6}(0{,}2)^k
+			\]
+			\textbf{4. Cek} dengan rekursi:\\[2pt]
+			\scriptsize
+			\begin{tabular}{@{}c c c c c c c@{}}
+				\toprule
+				$k$ & 0 & 1 & 2 & 3 & 4 & 5 \\
+				\midrule
+				rumus & 0 & 0 & 1 & 1,7 & 2,09 & 2,293 \\
+				rekursi & 0 & 0 & 1 & 1,7 & 2,09 & 2,293 \\
+				\bottomrule
+			\end{tabular}\\[4pt]
+			\small Nilai akhir $=c_1 = 2{,}5$. Cek dengan teorema: $\lim (z-1)Y(z) = \frac{1}{(0{,}5)(0{,}8)} = 2{,}5$.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Pembagian panjang untuk contoh yang sama}
+	\framesubtitle{Long division for the same example}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\small
+			Tulis dalam $z^{-1}$:
+			\[
+				Y(z) = \frac{z^{-2}}{1 - 1{,}7z^{-1} + 0{,}8z^{-2} - 0{,}1z^{-3}}
+			\]
+			Pembagian menghasilkan
+			\[
+				Y(z) = z^{-2} + 1{,}7z^{-3} + 2{,}09z^{-4} + 2{,}293z^{-5} + \cdots
+			\]
+			sehingga $y[2]=1$, $y[3]=1{,}7$, dan seterusnya.\\[4pt]
+			Setara dengan menjalankan rekursi
+			\[
+				y[k] = 1{,}7y[k-1] - 0{,}8y[k-2] + 0{,}1y[k-3] + x_{\text{in}}[k-2]
+			\]
+			dengan $x_{\text{in}}$ impuls.
+		\end{column}
+		\begin{column}{0.41\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=6.3cm,height=4.6cm,xmin=-0.5,xmax=9.5,ymin=0,ymax=2.9,xlabel={$k$},ylabel={$y[k]$}]
+					\addplot[skdgray,dashed,thin,domain=0:9.5] {2.5};
+					\addplot[skdorange,ycomb,mark=*,mark size=1.4pt] table[x=k,y=y] {data/p3_seq.dat};
+					\node[font=\scriptsize,anchor=north east] at (axis cs:9.3,2.45) {$y_\infty=2{,}5$};
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Kutub kompleks dan kutub berulang}
+	\framesubtitle{Complex and repeated poles}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			\textbf{Kutub kompleks} $z = re^{\pm j\theta}$ memberi suku
+			\[
+				x[k] = A\,r^k\cos(\theta k + \phi)
+			\]
+			Pasangan suku sekawan digabung, atau gunakan pasangan tabel $\sin/\cos$ dengan $r^k$:
+			\[
+				\mathcal{Z}\{r^k\sin\theta k\} = \frac{rz\sin\theta}{z^2 - 2rz\cos\theta + r^2}
+			\]
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\small
+			\textbf{Kutub berulang} $(z-a)^2$ memberi suku $k\,a^{k}$:
+			\[
+				\frac{X(z)}{z} = \frac{c_{11}}{(z-a)^2} + \frac{c_{12}}{z-a} + \cdots
+			\]
+			\begin{align*}
+				c_{11} &= \big[(z-a)^2 X(z)/z\big]_{z=a}\\
+				c_{12} &= \tfrac{d}{dz}\big[(z-a)^2X(z)/z\big]_{z=a}
+			\end{align*}
+			Pasangan tabel: $\dfrac{az}{(z-a)^2} \leftrightarrow k\,a^k$.
+		\end{column}
+	\end{columns}
+	\kunci{Lokasi kutub menentukan bentuk respons: $|a|<1$ meluruh, $|a|>1$ membesar, $a<0$ bergantian tanda (Pertemuan 6).}
+\end{frame}
+
+\begin{frame}[fragile]{Perangkat lunak}
+	\framesubtitle{Software tools}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\textbf{MATLAB}
+			\begin{block}{}
+				\scriptsize
+\begin{verbatim}
+syms z k
+Y = z/((z-1)*(z-0.5)*(z-0.2));
+iztrans(Y)          % bentuk tertutup
+[r,p,c] = residue(1,...
+   poly([1 0.5 0.2]))  % Y(z)/z
+G = tf(0.2,[1 -0.8],0.1);
+step(G)             % respons tangga
+\end{verbatim}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\textbf{Python}
+			\begin{block}{}
+				\scriptsize
+\begin{verbatim}
+import sympy as sp, control as ct
+z = sp.symbols('z')
+Y = z/((z-1)*(z-0.5)*(z-0.2))
+print(sp.apart(Y/z, z))  # Y(z)/z
+G = ct.tf([0.2],[1,-0.8],0.1)
+t, y = ct.step_response(G)
+\end{verbatim}
+			\end{block}
+		\end{column}
+	\end{columns}
+	\vspace{0.2cm}
+	{\small Gunakan perangkat lunak untuk \textbf{memeriksa}, bukan menggantikan, perhitungan tangan pada PR dan ujian.}
+\end{frame}
+
+\begin{frame}{Ringkasan dan latihan}
+	\framesubtitle{Summary and exercises}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Ringkasan}
+				\small
+				\begin{itemize}
+					\item Persamaan beda adalah model yang dieksekusi kontroler digital.
+					\item $X(z)=\sum x[k]z^{-k}$; $z^{-1}$ = tunda satu cacah.
+					\item Invers: uraikan $X(z)/z$ dengan pecahan parsial.
+					\item Nilai akhir: $\lim_{z\to1}(z-1)X(z)$, bila stabil.
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{Latihan}
+				\small
+				\begin{enumerate}
+					\item Tentukan $\mathcal{Z}\{k\,(0{,}5)^k\}$ dari sifat diferensiasi.
+					\item Selesaikan $y[k] - 1{,}2y[k-1] + 0{,}32y[k-2] = u[k-1]$ untuk masukan impuls.
+					\item Hitung invers dari $X(z) = \dfrac{z^2}{(z-1)(z-0{,}6)}$ dan nilai akhirnya.
+					\item Mengapa teorema nilai akhir tidak berlaku untuk $X(z)=\dfrac{z}{z-1{,}2}$?
+				\end{enumerate}
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\end{document}

@@ -1,0 +1,486 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{skd}
+
+\title[Pertemuan 5 -- Emulasi dan PID Diskrit]{Emulasi dan PID Diskrit}
+\subtitle{Emulation and Discrete PID Control (Heuristic Design)}
+\author{Ir. Estiyanti Ekawati, M.T., Ph.D. \quad\textbar\quad Faqihza Mukhlish, S.T., M.T., Ph.D.}
+\institute{Program Studi Teknik Fisika, Fakultas Teknologi Industri, Institut Teknologi Bandung}
+\date{Pertemuan 5 \textbar\ Semester I 2026/2027}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+	\titlepage
+\end{frame}
+
+\begin{frame}{Tujuan pertemuan}
+	\framesubtitle{Learning objectives}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{enumerate}
+				\item Mendiskritisasi pengontrol kontinu dengan Euler maju, Euler mundur, Tustin, dan \textit{matched pole-zero}.
+				\item Menjelaskan distorsi frekuensi Tustin dan \textit{prewarping}.
+				\item Menurunkan PID diskrit bentuk posisi dan bentuk kecepatan.
+				\item Menerapkan \textit{anti-windup}, filter derivatif, dan derivatif pada pengukuran.
+				\item Menala PID diskrit secara heuristik dengan koreksi tunda ZOH.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\begin{block}{Sub-CPMK S5}
+				\small Mendiskritisasi pengontrol kontinu (emulasi) dan mengimplementasikan PID diskrit beserta penalaan heuristiknya.\\[3pt]
+				\en{Discretise continuous controllers (emulation) and implement a discrete PID with heuristic tuning.}
+			\end{block}
+			{\small Bacaan: [FR] 4.3, 8.3; [PH] Bab 6, 8; [OG] 4.5}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Perancangan dengan Emulasi\texorpdfstring{\\[4pt]{\Large\en{Design by Emulation}}}{ / Design by Emulation}}
+% ===========================================================================
+
+\begin{frame}{Ide emulasi}
+	\framesubtitle{The idea of emulation}
+	\centering
+	\begin{tikzpicture}[node distance=0.5cm and 0.9cm]
+		\node[blk] (a) {Rancang $C(s)$\\(metode kontinu)};
+		\node[blkd,right=of a] (b) {Diskritisasi\\$C(s)\rightarrow D(z)$};
+		\node[blk,right=of b] (c) {Verifikasi\\dengan ZOH + $G(z)$};
+		\node[blk,right=of c] (d) {Implementasi\\persamaan beda};
+		\draw[sig] (a) -- (b); \draw[sig] (b) -- (c); \draw[sig] (c) -- (d);
+		\draw[sig,dashed,skdorange] (c.south) -- ++(0,-0.5) -| node[pos=0.25,below=2pt,font=\scriptsize,text=skdorange]{kinerja kurang? perkecil $T$ atau rancang ulang} (a.south);
+	\end{tikzpicture}
+
+	\vspace{0.5cm}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{Kelebihan}
+				\small Memakai seluruh pengalaman kontrol kontinu (PID, \textit{lead--lag}, \textit{loop shaping}).
+			\end{exampleblock}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{alertblock}{Kekurangan}
+				\small Hanya baik bila $T$ kecil ($\omega_s \gtrsim 20\omega_b$). Tunda ZOH $T/2$ diabaikan saat merancang $C(s)$.
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Tiga aproksimasi integrasi}
+	\framesubtitle{Three integration rules}
+	\begin{columns}[c]
+		\begin{column}{0.42\textwidth}
+			\centering
+			\begin{tikzpicture}[scale=0.9]
+				\draw[-{Stealth}] (0,0) -- (4.3,0) node[right,font=\scriptsize]{$t$};
+				\draw[-{Stealth}] (0,0) -- (0,2.6) node[above,font=\scriptsize]{$e(t)$};
+				\draw[skdblue,thick,domain=0.3:4,samples=40] plot (\x,{0.6+0.35*\x+0.15*sin(\x*120)});
+				\fill[skdorange,opacity=0.25] (1.5,0) rectangle (3,{0.6+0.35*1.5+0.15*sin(180)});
+				\fill[skdgreen,opacity=0.25] (1.5,0) -- (1.5,{0.6+0.35*1.5+0.15*sin(180)}) -- (3,{0.6+0.35*3+0.15*sin(360)}) -- (3,0) -- cycle;
+				\draw (1.5,0) node[below,font=\scriptsize]{$(k-1)T$} -- (1.5,0.05);
+				\draw (3,0) node[below,font=\scriptsize]{$kT$} -- (3,0.05);
+			\end{tikzpicture}\\
+			{\scriptsize persegi maju (jingga), trapesium (hijau)}
+		\end{column}
+		\begin{column}{0.55\textwidth}
+			\small
+			\renewcommand{\arraystretch}{2.1}
+			\begin{tabular}{@{}l l l@{}}
+				\toprule
+				\textbf{Metode} & \textbf{Integrasi} & \textbf{Substitusi $s \leftarrow$} \\
+				\midrule
+				Euler maju & $e[k-1]\,T$ & $\dfrac{z-1}{T}$ \\
+				Euler mundur & $e[k]\,T$ & $\dfrac{z-1}{zT}$ \\
+				Tustin (bilinear) & $\tfrac{T}{2}(e[k]+e[k-1])$ & $\dfrac{2}{T}\,\dfrac{z-1}{z+1}$ \\
+				\bottomrule
+			\end{tabular}\\[4pt]
+			Integrator $1/s$ diganti dengan aturan integrasi numerik masing-masing.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Pemetaan daerah stabil}
+	\framesubtitle{How each method maps the stable region}
+	\begin{columns}[c]
+		\begin{column}{0.62\textwidth}
+			\centering
+			\begin{tikzpicture}[scale=0.62]
+				\foreach \cx/\name in {0/{Euler maju},4.6/{Euler mundur},9.2/{Tustin}} {
+						\begin{scope}[xshift=\cx cm]
+							\draw[skdgray] (0,0) circle (1.4);
+							\draw[-{Stealth}] (-2,0) -- (2,0);
+							\draw[-{Stealth}] (0,-1.9) -- (0,1.9);
+							\node[font=\scriptsize] at (0,-2.4) {\name};
+						\end{scope}
+					}
+				% maju: Re z < 1 (setengah bidang)
+				\fill[skdorange,opacity=0.25] (-2,-1.9) rectangle (1.4,1.9);
+				% mundur: lingkaran pusat 0.5 radius 0.5
+				\fill[skdorange,opacity=0.35] (4.6+0.7,0) circle (0.7);
+				% tustin: lingkaran satuan
+				\fill[skdorange,opacity=0.35] (9.2,0) circle (1.4);
+			\end{tikzpicture}\\[2pt]
+			{\scriptsize Daerah jingga: citra setengah bidang kiri $s$; lingkaran abu-abu: $|z|=1$}
+		\end{column}
+		\begin{column}{0.36\textwidth}
+			\small
+			\begin{itemize}
+				\item \textbf{Maju}: $C(s)$ stabil dapat menjadi $D(z)$ \alert{tidak stabil}.
+				\item \textbf{Mundur}: selalu stabil, tetapi memetakan ke lingkaran kecil (redaman berlebih).
+				\item \textbf{Tustin}: setengah bidang kiri tepat ke dalam lingkaran satuan. Pilihan umum.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Distorsi frekuensi Tustin dan \textit{prewarping}}
+	\framesubtitle{Tustin frequency warping and prewarping}
+	\begin{columns}[c]
+		\begin{column}{0.48\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=6.8cm,height=5cm,xmin=0,xmax=3.1,ymin=0,ymax=6,xlabel={$\omega_d T$ (frekuensi diskrit)},ylabel={$\omega_c T$ (frekuensi kontinu)},xtick={0,1,2,3.1416},xticklabels={0,1,2,$\pi$}]
+					\addplot[skdgray,dashed,domain=0:3] {x};
+					\addplot[skdblue,domain=0:3.0,samples=100] {2*tan(deg(x/2))};
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\small
+			Substitusi $z=e^{j\omega_dT}$ ke Tustin:
+			\[
+				\omega_c = \frac{2}{T}\tan\frac{\omega_d T}{2}
+			\]
+			Seluruh sumbu $j\omega_c$ dimampatkan ke $0 \le \omega_d < \omega_N$. Pada $\omega_d \ll \omega_N$ distorsi kecil.\\[4pt]
+			\textbf{\textit{Prewarping}}: agar frekuensi kritis $\omega_1$ (misalnya \textit{crossover} atau \textit{notch}) tepat sama:
+			\[
+				s \leftarrow \frac{\omega_1}{\tan(\omega_1 T/2)}\,\frac{z-1}{z+1}
+			\]
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{\textit{Matched pole-zero} (MPZ)}
+	\framesubtitle{Matched pole-zero mapping}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Aturan:
+			\begin{enumerate}
+				\item Setiap kutub dan zero berhingga: $s=p \;\Rightarrow\; z = e^{pT}$.
+				\item Zero di tak hingga dipetakan ke $z=-1$ (opsional; biarkan satu tunda agar kausal-tegas).
+				\item Samakan penguatan DC: $D(1) = C(0)$.
+			\end{enumerate}
+			\vspace{0.15cm}
+			\textbf{Contoh} $C(s)=\dfrac{10(s+2)}{s+10}$, $T=0{,}05$\,s:
+			\[
+				D(z) = k_d\frac{z - e^{-0{,}1}}{z - e^{-0{,}5}} = 8{,}269\,\frac{z-0{,}9048}{z-0{,}6065}
+			\]
+			dengan $k_d$ dari $D(1) = C(0) = 2$.
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{block}{Hasil keempat metode}
+				\scriptsize
+				\renewcommand{\arraystretch}{2.5}
+				\begin{tabular}{@{}l l@{}}
+					\toprule
+					Metode & $D(z)$ \\
+					\midrule
+					Euler maju & $\dfrac{10z - 9}{z - 0{,}5}$ \\
+					Euler mundur & $\dfrac{7{,}333z - 6{,}667}{z - 0{,}6667}$ \\
+					Tustin & $\dfrac{8{,}4z - 7{,}6}{z - 0{,}6}$ \\
+					MPZ & $\dfrac{8{,}269z - 7{,}482}{z - 0{,}6065}$ \\
+					\bottomrule
+				\end{tabular}
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Perbandingan respons frekuensi}
+	\framesubtitle{Frequency response comparison}
+	\begin{columns}[c]
+		\begin{column}{0.64\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{groupplot}[group style={group size=1 by 2,vertical sep=0.35cm,xticklabels at=edge bottom},skd,width=9.4cm,height=3.5cm,xmode=log,xmin=0.1,xmax=62.8]
+					\nextgroupplot[ylabel={dB},legend style={at={(0.02,0.98)},anchor=north west},legend columns=5]
+					\addplot[black,very thick] table[x=w,y=mc] {data/p5_emul.dat};
+					\addplot[skdred] table[x=w,y=mf] {data/p5_emul.dat};
+					\addplot[skdgreen] table[x=w,y=mb] {data/p5_emul.dat};
+					\addplot[skdblue,dashed] table[x=w,y=mt] {data/p5_emul.dat};
+					\addplot[skdorange,dotted] table[x=w,y=mm] {data/p5_emul.dat};
+					\legend{$C(s)$, maju, mundur, Tustin, MPZ}
+					\nextgroupplot[ylabel={fasa (\textdegree)},xlabel={$\omega$ (rad/s)}]
+					\addplot[black,very thick] table[x=w,y=pc] {data/p5_emul.dat};
+					\addplot[skdred] table[x=w,y=pf] {data/p5_emul.dat};
+					\addplot[skdgreen] table[x=w,y=pb] {data/p5_emul.dat};
+					\addplot[skdblue,dashed] table[x=w,y=pt] {data/p5_emul.dat};
+					\addplot[skdorange,dotted] table[x=w,y=pm] {data/p5_emul.dat};
+				\end{groupplot}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.33\textwidth}
+			\small
+			$T = 0{,}05$\,s, $\omega_N = 62{,}8$ rad/s.
+			\begin{itemize}
+				\item Di bawah $\approx 5$ rad/s semua metode hampir sama.
+				\item Mendekati $\omega_N$ perbedaannya besar, terutama fasa.
+				\item Tustin dan MPZ paling dekat dengan $C(s)$ di rentang kerja.
+			\end{itemize}
+			\kunci{Pilih $T$ sehingga frekuensi penting jauh di bawah $\omega_N$.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{PID Diskrit\texorpdfstring{\\[4pt]{\Large\en{Discrete PID}}}{ / Discrete PID}}
+% ===========================================================================
+
+\begin{frame}{PID diskrit bentuk posisi}
+	\framesubtitle{Position (absolute) form}
+	\begin{columns}[T]
+		\begin{column}{0.54\textwidth}
+			\small
+			Dari $u(t) = K_p\big[e + \frac{1}{T_i}\int e\,dt + T_d\,\dot e\big]$, integral dengan persegi mundur, derivatif dengan beda mundur:
+			\begin{block}{}
+				\[
+					u[k] = K_p\Big[e[k] + \frac{T}{T_i}\sum_{j=0}^{k} e[j] + \frac{T_d}{T}\big(e[k]-e[k-1]\big)\Big]
+				\]
+			\end{block}
+			Implementasi rekursif:
+			\begin{align*}
+				I[k] &= I[k-1] + \frac{K_pT}{T_i}e[k]\\
+				u[k] &= K_pe[k] + I[k] + \frac{K_pT_d}{T}(e[k]-e[k-1])
+			\end{align*}
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\small
+			Dalam domain $z$ (persegi mundur):
+			\[
+				D(z) = K_p\left[1 + \frac{T}{T_i}\frac{z}{z-1} + \frac{T_d}{T}\frac{z-1}{z}\right]
+			\]
+			\begin{itemize}
+				\item Integrator diskrit: kutub di $z=1$.
+				\item Penguatan derivatif efektif $K_pT_d/T$ \alert{membesar bila $T$ kecil}: derau ikut membesar.
+				\item Varian Tustin: integral trapesium, derivatif dengan filter.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{PID diskrit bentuk kecepatan (inkremental)}
+	\framesubtitle{Velocity (incremental) form}
+	\begin{columns}[T]
+		\begin{column}{0.54\textwidth}
+			\small
+			Kurangkan $u[k-1]$ dari $u[k]$:
+			\[
+				\Delta u[k] = q_0\,e[k] + q_1\,e[k-1] + q_2\,e[k-2]
+			\]
+			\begin{align*}
+				q_0 &= K_p\Big(1 + \frac{T}{T_i} + \frac{T_d}{T}\Big)\\
+				q_1 &= -K_p\Big(1 + \frac{2T_d}{T}\Big)\\
+				q_2 &= K_p\frac{T_d}{T}
+			\end{align*}
+			$u[k] = u[k-1] + \Delta u[k]$.
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\begin{exampleblock}{Contoh}
+				\small
+				$K_p=2$, $T_i=0{,}5$\,s, $T_d=0{,}05$\,s, $T=0{,}1$\,s:\\
+				$q_0 = 3{,}4$, $q_1 = -4{,}0$, $q_2 = 1{,}0$\\[3pt]
+				$u[k] = u[k-1] + 3{,}4e[k] - 4e[k-1] + e[k-2]$
+			\end{exampleblock}
+			\small
+			\textbf{Keunggulan}: tidak ada akumulator eksplisit, transfer manual--otomatis mulus (\textit{bumpless}), \textit{anti-windup} cukup dengan membatasi $u[k]$.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{PID praktis}
+	\framesubtitle{Practical PID}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			\textbf{1. Filter derivatif}: $T_ds \rightarrow \dfrac{T_d s}{1+T_ds/N}$, $N \approx 5$--$20$. Diskrit (Euler mundur):
+			\[
+				D_f[k] = \frac{T_f D_f[k-1] + T_d\,(y[k]-y[k-1])}{T_f + T},\ \ T_f = \frac{T_d}{N}
+			\]
+			\textbf{2. Derivatif pada pengukuran}: pakai $-y$ alih-alih $e$, sehingga perubahan tangga \textit{setpoint} tidak menimbulkan lonjakan $u$.\\[3pt]
+			\textbf{3. Bobot \textit{setpoint}}: bagian P memakai $\beta r - y$, $0\le\beta\le1$.
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\small
+			\textbf{4. \textit{Anti-windup}}: saat aktuator jenuh, integrator terus menumpuk galat sehingga timbul lewatan besar.
+			\begin{itemize}
+				\item \textit{Clamping}: hentikan integrasi bila $u$ jenuh dan galat mendorong lebih jenuh.
+				\item \textit{Back-calculation}: $I[k] \mathrel{+}= \frac{T}{T_t}\big(u_{\text{sat}}-u\big)$.
+			\end{itemize}
+			\textbf{5. Batas dan laju}: batasi $u$ dan $\Delta u$ sesuai aktuator (kit: $-100$..$100\%$).
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Contoh \textit{integrator windup}}
+	\framesubtitle{Integrator windup example}
+	\begin{columns}[c]
+		\begin{column}{0.6\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{groupplot}[group style={group size=1 by 2,vertical sep=0.35cm,xticklabels at=edge bottom},skd,width=8.8cm,height=3.4cm,xmin=0,xmax=6]
+					\nextgroupplot[ylabel={$y$},ymin=0,ymax=1.3,legend style={at={(0.98,0.05)},anchor=south east},legend columns=2]
+					\addplot[skdgray,dashed,thin,domain=0:6,forget plot] {1};
+					\addplot[skdred,const plot] table[x=t,y=yn] {data/p5_windup.dat};
+					\addlegendentry{tanpa AW}
+					\addplot[skdblue,const plot] table[x=t,y=yc] {data/p5_windup.dat};
+					\addlegendentry{\textit{clamping}}
+					\nextgroupplot[ylabel={$u$},ymin=0,ymax=1.4,xlabel={$t$ (s)}]
+					\addplot[skdred,const plot] table[x=t,y=un] {data/p5_windup.dat};
+					\addplot[skdblue,const plot] table[x=t,y=uc] {data/p5_windup.dat};
+				\end{groupplot}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.36\textwidth}
+			\small
+			Plant kecepatan acuan, PI $K_p=3$, $T_i=0{,}15$\,s, $T=0{,}1$\,s, aktuator jenuh $|u|\le1{,}2$, $r=1$.
+			\begin{itemize}
+				\item Tanpa \textit{anti-windup}: $M_p \approx 19{,}6\%$, $t_s \approx 3{,}2$\,s.
+				\item Dengan \textit{clamping}: $M_p \approx 0{,}3\%$, $t_s \approx 1{,}0$\,s.
+			\end{itemize}
+			{\scriptsize Saturasi juga terjadi di kit: masukan dibatasi $\pm100\%$.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Implementasi pada mikrokontroler}
+	\framesubtitle{Implementation on a microcontroller}
+	\begin{columns}[T]
+		\begin{column}{0.56\textwidth}
+			\begin{block}{}
+				\scriptsize
+\begin{verbatim}
+// dipanggil tiap T (di dalam blok millis())
+float pid(float r, float y) {
+  float e  = r - y;
+  float P  = Kp * e;
+  Df = (Tf*Df + Td*(y - yPrev)) / (Tf + T);
+  float D  = -Kp * Df;            // D pada y
+  float v  = P + I + D;
+  float u  = constrain(v, -100, 100);
+  if (u == v || e*v < 0)          // clamping
+    I += Kp * T / Ti * e;
+  yPrev = y;
+  return u;
+}
+\end{verbatim}
+			\end{block}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\small
+			\begin{itemize}
+				\item Hitung dan kirim $u$ \textbf{secepat mungkin} setelah membaca $y$ untuk memperkecil tunda komputasi.
+				\item Variabel \texttt{I}, \texttt{Df}, \texttt{yPrev} bersifat global/\texttt{static}.
+				\item Pada kit, fungsi ini mengisi tab \texttt{5\_control.ino} (Modul 2).
+				\item Satuan konsisten: $T$ dalam detik bila $T_i$, $T_d$ dalam detik.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Penalaan Heuristik untuk PID Diskrit\texorpdfstring{\\[4pt]{\Large\en{Heuristic Tuning of Discrete PID}}}{ / Heuristic Tuning of Discrete PID}}
+% ===========================================================================
+
+\begin{frame}{Koreksi tunda ZOH}
+	\framesubtitle{Accounting for the ZOH delay}
+	\begin{columns}[c]
+		\begin{column}{0.56\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=8.6cm,height=5.4cm,xmin=0,xmax=8,ymin=0,ymax=2,xlabel={$t$ (s)},ylabel={$y$},legend style={at={(0.98,0.98)},anchor=north east}]
+					\addplot[skdgray,dashed,thin,domain=0:8,forget plot] {1};
+					\addplot[skdred] table[x=t,y=y0] {data/p5_pidcorr.dat};
+					\addlegendentry{ZN dengan $\theta$}
+					\addplot[skdblue] table[x=t,y=y1] {data/p5_pidcorr.dat};
+					\addlegendentry{ZN dengan $\theta+T/2$}
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\small
+			ZOH menambah tunda $\approx T/2$, sehingga untuk tabel ZN/Cohen--Coon pakai
+			\[
+				\theta' = \theta + \frac{T}{2}
+			\]
+			Plant FOPDT Pertemuan 1, $T=0{,}05$\,s:\\[2pt]
+			\scriptsize
+			\begin{tabular}{@{}l c c c c@{}}
+				\toprule
+				 & $K_p$ & $T_i$ & $M_p$ & $t_s$ \\
+				\midrule
+				$\theta$ & 3,00 & 0,60 & 89\% & $>8$ s \\
+				$\theta'$ & 2,77 & 0,65 & 72\% & 6,0 s \\
+				\bottomrule
+			\end{tabular}\\[4pt]
+			\small Koreksi membantu, tetapi ZN tetap agresif $\Rightarrow$ penalaan halus.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Prosedur penalaan halus}
+	\framesubtitle{Fine-tuning procedure}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\begin{enumerate}
+				\item Mulai dari hasil ZN/Cohen--Coon dengan $\theta' = \theta + T/2$.
+				\item Turunkan $K_p$ hingga lewatan sesuai spesifikasi.
+				\item Atur $T_i$: kecilkan untuk menghilangkan galat lebih cepat, besarkan bila berosilasi.
+				\item Tambahkan $T_d$ secukupnya untuk meredam; perhatikan derau pada $u$.
+				\item Uji perubahan \textit{setpoint} naik dan turun, serta gangguan beban.
+				\item Catat $M_p$, $t_s$, $e_{ss}$, IAE, dan $u_{\max}$.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{block}{Modul 2: kontrol kecepatan}
+				\small
+				\begin{itemize}
+					\item \textit{Setpoint} 20\%, 90\%, 50\%.
+					\item Bandingkan simulasi MATLAB dan implementasi.
+					\item Tentukan parameter terbaik untuk tiap waktu cacah.
+					\item Mengapa kontrol P saja tidak mencapai \textit{setpoint}?
+				\end{itemize}
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Ringkasan dan latihan}
+	\framesubtitle{Summary and exercises}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Ringkasan}
+				\small
+				\begin{itemize}
+					\item Emulasi: rancang $C(s)$, lalu Tustin/MPZ ke $D(z)$; valid bila $T$ kecil.
+					\item Euler maju dapat menghasilkan $D(z)$ tidak stabil.
+					\item PID posisi vs kecepatan; selalu pakai filter D dan \textit{anti-windup}.
+					\item Penalaan heuristik: tambahkan $T/2$ pada tunda plant.
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{Latihan}
+				\small
+				\begin{enumerate}
+					\item Diskritisasi $C(s) = \dfrac{5(s+1)}{s+20}$ dengan Tustin dan MPZ, $T=0{,}02$\,s.
+					\item Turunkan $q_0$, $q_1$, $q_2$ bentuk kecepatan dari bentuk posisi.
+					\item Tunjukkan bahwa Euler maju memetakan $s=-50$ ke luar lingkaran satuan jika $T = 0{,}05$\,s.
+					\item Simulasikan PI pada plant kecepatan dengan saturasi, dengan dan tanpa \textit{anti-windup}.
+				\end{enumerate}
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\end{document}

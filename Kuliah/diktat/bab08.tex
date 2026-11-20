@@ -1,0 +1,92 @@
+\chapter{Perancangan dengan \textit{Root Locus} di Bidang $z$}
+\label{bab:rlocus}
+\enchap{Root-Locus Design in the $z$-Plane}
+
+\begin{tujuan}
+	Setelah mempelajari bab ini, Anda mampu menggambar dan membaca \textit{root locus} sistem diskrit, menerjemahkan spesifikasi menjadi kutub kalang tertutup yang diinginkan, merancang kompensator \textit{lead} diskrit dengan syarat sudut dan magnitudo, serta menambahkan aksi integral atau \textit{lag}.
+\end{tujuan}
+
+\section{\textit{Root locus} diskrit}
+Persamaan karakteristik $1 + K\,L(z) = 0$ dipenuhi oleh titik-titik $z$ yang memenuhi
+\begin{equation}
+	\angle L(z) = \pm180^\circ(2q+1),\qquad K = \frac{1}{|L(z)|}.
+\end{equation}
+Aturan menggambarnya sama persis dengan bidang $s$: lokus berawal di kutub $L$ untuk $K = 0$ dan berakhir di zero untuk $K \to \infty$; pada sumbu riil, lokus berada di kiri jumlah ganjil kutub dan zero; asimtot, titik pisah, dan sudut keberangkatan dihitung dengan cara yang sama. Yang berbeda adalah interpretasinya. Batas stabil adalah lingkaran satuan, kontur kinerja adalah spiral $\zeta$ dan lingkaran $|z| = e^{-4T/t_s}$ (Bab~\ref{bab:responsz}), dan \textit{sampling zero} serta tunda ($z^{-d}$, kutub di $z = 0$) memengaruhi bentuk lokus.
+
+\begin{contoh}[Plant posisi dengan kontrol P]
+	$L(z) = G_p(z) = 0{,}009365(z + 0{,}9356)/((z-1)(z-0{,}8187))$. Kedua kutub bertemu di sumbu riil, lalu lokus melingkari zero $-0{,}936$ dan keluar dari lingkaran satuan pada $K_p = 20{,}7$, sesuai dengan uji Jury di Bab~\ref{bab:stabil}. Untuk $\zeta = 0{,}5$ diperlukan $K_p = 1{,}67$ dengan kutub $0{,}902 \pm j0{,}144$, yang memberi $M_p \approx 16\%$ tetapi $t_s \approx 4$\,s. Untuk respons yang lebih cepat diperlukan kompensator.
+\end{contoh}
+
+\section{Perancangan kompensator \textit{lead}}
+Kompensator diskrit orde satu $D(z) = K_c(z - z_c)/(z - p_c)$ dirancang dengan langkah berikut.
+\begin{enumerate}
+	\item Dari spesifikasi, tentukan kutub kontinu $s_d = -\zeta\omega_n \pm j\omega_d$ dan petakan ke $z_d = e^{s_dT}$.
+	\item Hitung $\angle G(z_d)$ dan defisit sudut $\phi = -180^\circ - \angle G(z_d)$ (modulo $360^\circ$).
+	\item Pilih zero $z_c$, misalnya untuk membatalkan kutub plant yang lambat.
+	\item Hitung kutub $p_c$ agar $\angle(z_d - z_c) - \angle(z_d - p_c) = \phi$.
+	\item Hitung $K_c$ dari syarat magnitudo $|D(z_d)G(z_d)| = 1$.
+	\item Verifikasi dengan simulasi, termasuk kutub lain dan respons antar-cacah.
+\end{enumerate}
+
+\begin{contoh}[\textit{Lead} untuk plant posisi]
+	Spesifikasi: $\zeta = 0{,}5$, $t_s \le 2$\,s, $T = 0{,}1$\,s, dan galat tangga nol.
+
+	\textit{Langkah 1.} $\zeta\omega_n = 4/t_s = 2$, $\omega_n = 4$, $\omega_d = 3{,}464$ rad/s, sehingga $z_d = e^{(-2+j3{,}464)(0{,}1)} = 0{,}819\angle19{,}85^\circ = 0{,}770 + j0{,}278$.
+
+	\textit{Langkah 2.} $\angle G_p(z_d) = 139{,}74^\circ$, sehingga $\phi = -180^\circ - 139{,}74^\circ + 360^\circ = 40{,}26^\circ$.
+
+	\textit{Langkah 3.} Zero membatalkan kutub plant: $z_c = 0{,}8187$, dengan $\angle(z_d - z_c) = 99{,}92^\circ$.
+
+	\textit{Langkah 4.} $\angle(z_d - p_c) = 99{,}92^\circ - 40{,}26^\circ = 59{,}66^\circ$, sehingga $p_c = 0{,}770 - 0{,}278/\tan59{,}66^\circ = 0{,}607$.
+
+	\textit{Langkah 5.} $K_c = 1/|G_p(z_d)(z_d - z_c)/(z_d - p_c)| = 7{,}18$.
+
+	Hasilnya
+	\[
+		D(z) = 7{,}18\,\frac{z - 0{,}8187}{z - 0{,}6074},\qquad u[k] = 0{,}6074\,u[k-1] + 7{,}18\,e[k] - 5{,}877\,e[k-1].
+	\]
+	\textit{Langkah 6.} Kutub kalang tertutup $0{,}770 \pm j0{,}278$ (ditambah $0{,}8187$ yang dibatalkan zero). Simulasi memberi $M_p = 16{,}3\%$ dan $t_s = 2{,}1$\,s, dibandingkan $t_s = 4{,}0$\,s untuk kontrol P dengan redaman yang sama (Gambar~\ref{fig:b8-lead}). Aksi kontrol awal adalah $u[0] = K_c = 7{,}18$ untuk tangga satuan, sehingga kejenuhan aktuator perlu diperiksa. Lokus terkompensasi tetap stabil hingga $K_c \approx 45$, margin penguatan sekitar enam kali.
+\end{contoh}
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}
+		\begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.5cm},skd,width=7cm,height=4.8cm,xmin=0,xmax=4,xlabel={$t$ (s)}]
+			\nextgroupplot[ylabel={$y$},ymin=0,ymax=1.3,legend style={at={(0.98,0.05)},anchor=south east}]
+			\addplot[skdgray,dashed,thin,domain=0:4,forget plot] {1};
+			\addplot[skdblue,const plot] table[x=t,y=ylead] {\dat{p9_step.dat}};
+			\addplot[skdorange,const plot] table[x=t,y=yp] {\dat{p9_step.dat}};
+			\legend{\textit{lead}, P ($K_p=1{,}67$)}
+			\nextgroupplot[ylabel={$u$ (\textit{lead})},ymin=-1,ymax=7.5]
+			\addplot[skdblue,const plot] table[x=t,y=ulead] {\dat{p9_step.dat}};
+		\end{groupplot}
+	\end{tikzpicture}
+	\caption{Respons tangga kontrol posisi dengan kompensator \textit{lead} diskrit}
+	\label{fig:b8-lead}
+\end{figure}
+
+\begin{catatan}
+	Pembatalan kutub--zero tidak pernah eksak pada perangkat keras; kutub $0{,}8187$ tetap ada sebagai pasangan kutub--zero yang hampir saling meniadakan. Ini aman karena kutub itu di dalam lingkaran satuan. Jangan pernah membatalkan kutub di luar atau pada lingkaran satuan: galat sekecil apa pun membuat kalang tertutup tidak stabil.
+\end{catatan}
+
+\section{Galat tunak: \textit{lag} dan PI diskrit}
+Kompensator \textit{lag} $D_{\text{lag}}(z) = (z - z_l)/(z - p_l)$ dengan $p_l < z_l$ keduanya sangat dekat $z = 1$ menaikkan penguatan DC sebesar $(1-p_l)/(1-z_l)$ tanpa banyak mengubah sudut di $z_d$. PI diskrit adalah kasus $p_l = 1$, yang memberi galat tangga nol pada plant tipe 0. Untuk plant kecepatan, $D(z) = K_c(z - a)/(z-1)$ membatalkan kutub plant, sehingga $L(z) = K_cb/(z-1)$ dan kutub kalang tertutup $z = 1 - K_cb$ dapat ditala dengan satu parameter.
+
+\section{Perancangan langsung atau emulasi}
+Perancangan langsung di bidang $z$ memperhitungkan ZOH dan $T$ secara eksak dan tetap valid untuk $T$ relatif besar, tetapi memerlukan model $G(z)$ dan alat bidang $z$. Emulasi (Bab~\ref{bab:emulasi}) memanfaatkan intuisi kontinu tetapi kinerjanya turun bila $\omega_s < 20\omega_b$. Pada Modul 3, bandingkan PID hasil penalaan dengan kompensator \textit{lead} hasil \textit{root locus} dalam hal kinerja, usaha kontrol, dan ketahanan terhadap gangguan.
+
+\begin{ringkasan}
+	Aturan \textit{root locus} diskrit sama dengan kontinu, tetapi batas stabilnya lingkaran satuan. Spesifikasi diterjemahkan menjadi $z_d = e^{s_dT}$. Kompensator \textit{lead} dirancang dengan syarat sudut (untuk $p_c$) dan syarat magnitudo (untuk $K_c$); \textit{lag} atau PI ditambahkan untuk galat tunak. Jangan membatalkan kutub yang tidak stabil.\\[3pt]
+	\en{Discrete root locus uses the same rules with the unit circle as stability boundary; design a lead compensator from angle and magnitude conditions at $z_d = e^{s_dT}$; add lag or PI action for steady-state error; never cancel unstable poles.}
+\end{ringkasan}
+
+\paragraph{Istilah kunci.} tempat kedudukan akar \en{(root locus)}, syarat sudut \en{(angle condition)}, syarat magnitudo \en{(magnitude condition)}, kompensator \textit{lead}/\textit{lag}, pembatalan kutub--zero \en{(pole--zero cancellation)}, defisit sudut \en{(angle deficiency)}.
+
+\section*{Latihan}
+\begin{enumerate}
+	\item Ulangi perancangan \textit{lead} untuk $\zeta = 0{,}7$ dan $t_s = 1{,}5$\,s.
+	\item Rancang PI diskrit untuk plant kecepatan agar $t_s = 0{,}6$\,s tanpa lewatan.
+	\item Gambarkan lokus plant posisi dengan tunda komputasi $z^{-1}$ dan tentukan $K_{p,\max}$.
+	\item Simulasikan rancangan nomor 1 dengan batas $|u| \le 1$ dan komentari hasilnya.
+	\item Rancang \textit{lead} yang sama dengan memilih $z_c = 0{,}9$ (tanpa pembatalan) dan bandingkan responsnya.
+\end{enumerate}

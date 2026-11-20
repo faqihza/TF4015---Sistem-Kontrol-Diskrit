@@ -1,0 +1,332 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{skd}
+
+\title[Pertemuan 13 -- Pengamat Keadaan]{Pengamat Keadaan}
+\subtitle{State Observers}
+\author{Ir. Estiyanti Ekawati, M.T., Ph.D. \quad\textbar\quad Faqihza Mukhlish, S.T., M.T., Ph.D.}
+\institute{Program Studi Teknik Fisika, Fakultas Teknologi Industri, Institut Teknologi Bandung}
+\date{Pertemuan 13 \textbar\ Semester I 2026/2027}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+	\titlepage
+\end{frame}
+
+\begin{frame}{Tujuan pertemuan}
+	\framesubtitle{Learning objectives}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{enumerate}
+				\item Menjelaskan mengapa estimasi keadaan diperlukan.
+				\item Merancang pengamat prediktor dan pengamat \textit{current} orde penuh.
+				\item Merancang pengamat orde tereduksi.
+				\item Menerapkan prinsip pemisahan untuk menggabungkan pengamat dan umpan balik keadaan.
+				\item Menurunkan fungsi transfer kompensator ekuivalen.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\begin{block}{Sub-CPMK S12}
+				\small Merancang pengamat keadaan dan menggabungkannya dengan umpan balik keadaan.\\[3pt]
+				\en{Design state observers and combine them with state feedback.}
+			\end{block}
+			{\small Bacaan: [OG] 6.6--6.8; [PH] 9.5--9.7; [FR] 7.7--7.8}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Pengamat Orde Penuh\texorpdfstring{\\[4pt]{\Large\en{Full-Order Observers}}}{ / Full-Order Observers}}
+% ===========================================================================
+
+\begin{frame}{Masalah: tidak semua keadaan terukur}
+	\framesubtitle{The problem: not every state is measured}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\begin{itemize}
+				\item Umpan balik keadaan butuh seluruh $\mathbf{x}$; sensor biasanya hanya mengukur sebagian.
+				\item Menurunkan pengukuran ($\Delta\theta/T$) memperkuat derau dan kuantisasi (Pertemuan 2).
+				\item Sensor tambahan menambah biaya; tachometer kit juga terfilter dan berderau.
+			\end{itemize}
+			\kunci{Solusi: \textbf{estimasi} $\hat{\mathbf{x}}$ dari model + pengukuran $y$ + masukan $u$.}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{alertblock}{Estimator kalang terbuka}
+				\small
+				Salinan model $\hat{\mathbf{x}}[k+1] = \Phi\hat{\mathbf{x}}[k] + \Gamma u[k]$.\\[3pt]
+				Galat $\tilde{\mathbf{x}} = \mathbf{x} - \hat{\mathbf{x}}$ berevolusi $\tilde{\mathbf{x}}[k+1] = \Phi\tilde{\mathbf{x}}[k]$: hanya konvergen secepat plant, dan \alert{tidak konvergen} untuk plant dengan integrator (kutub $z=1$).
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Pengamat prediktor}
+	\framesubtitle{Prediction observer}
+	\begin{columns}[c]
+		\begin{column}{0.52\textwidth}
+			\small
+			Koreksi model dengan galat keluaran:
+			\begin{block}{}
+				\[
+					\hat{\mathbf{x}}[k+1] = \Phi\hat{\mathbf{x}}[k] + \Gamma u[k] + L\big(y[k] - C\hat{\mathbf{x}}[k]\big)
+				\]
+			\end{block}
+			Dinamika galat:
+			\[
+				\tilde{\mathbf{x}}[k+1] = (\Phi - LC)\,\tilde{\mathbf{x}}[k]
+			\]
+			Pilih $L$ agar nilai eigen $\Phi - LC$ di lokasi yang diinginkan. Bisa dilakukan sembarang $\iff$ $(\Phi, C)$ teramati.
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\small
+			\textbf{Dualitas}: menempatkan nilai eigen $\Phi - LC$ sama dengan menempatkan nilai eigen $\Phi^\top - C^\top L^\top$, yaitu penempatan kutub pada pasangan $(\Phi^\top, C^\top)$.
+			\begin{block}{Ackermann untuk pengamat}
+				\[
+					L = \alpha_e(\Phi)\,W_o^{-1}\begin{bmatrix}0\\ \vdots\\ 1\end{bmatrix}
+				\]
+			\end{block}
+			{\scriptsize \texttt{L = acker(Phi',C',pe)'} atau \texttt{place}.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Contoh: estimasi kecepatan dari posisi}
+	\framesubtitle{Example: estimating speed from position}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			Motor posisi, $C = [1\ \ 0]$ (potensiometer). Kutub kontroler (Pertemuan 12): $|z| = 0{,}756$.\\[3pt]
+			Pilih kutub pengamat lebih cepat: $z = 0{,}40$ dan $0{,}45$.
+			\[
+				\alpha_e(z) = (z-0{,}4)(z-0{,}45) = z^2 - 0{,}85z + 0{,}18
+			\]
+			\begin{block}{Hasil}
+				\[
+					L = \begin{bmatrix} 0{,}9687\\ 1{,}7035\end{bmatrix}
+				\]
+			\end{block}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\small
+			Persamaan yang dieksekusi tiap cacah, dengan $e_y = y[k] - \hat\theta[k]$:
+			\begin{align*}
+				\hat\theta^+ &= \hat\theta + 0{,}0906\,\hat\omega + 0{,}0094\,u + 0{,}969\,e_y\\
+				\hat\omega^+ &= 0{,}8187\,\hat\omega + 0{,}1813\,u + 1{,}704\,e_y
+			\end{align*}
+			Prediktor: $\hat{\mathbf{x}}[k]$ hanya memakai $y$ hingga $k-1$, sehingga ada tunda satu cacah dalam estimasi.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Hasil simulasi pengamat}
+	\framesubtitle{Observer simulation result}
+	\begin{columns}[c]
+		\begin{column}{0.6\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=9cm,height=5.6cm,xmin=0,xmax=6,ymin=-1.3,ymax=1.3,xlabel={$t$ (s)},ylabel={$\omega$ (rad/s)},legend style={at={(0.5,1.02)},anchor=south},legend columns=3]
+					\addplot[skdgray!70,const plot,thin] table[x=t,y=wfd] {data/p13_obs.dat};
+					\addplot[black,const plot] table[x=t,y=w] {data/p13_obs.dat};
+					\addplot[skdorange,const plot,thick] table[x=t,y=what] {data/p13_obs.dat};
+					\legend{beda hingga $\Delta y/T$, sebenarnya, estimasi pengamat}
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.36\textwidth}
+			\small
+			Masukan $u$ berubah tiga kali; posisi terukur dengan derau $\sigma = 0{,}005$ rad. Estimasi awal sengaja salah: $\hat{\mathbf{x}}[0] = [0{,}2\ \ -0{,}5]^\top$.\\[4pt]
+			\renewcommand{\arraystretch}{1.2}
+			\begin{tabular}{@{}l c@{}}
+				\toprule
+				Metode & RMS galat $\omega$ \\
+				\midrule
+				Beda hingga & 0,093 \\
+				Pengamat & 0,010 \\
+				\bottomrule
+			\end{tabular}\\[4pt]
+			Galat awal hilang dalam beberapa cacah (kutub 0,4 dan 0,45).
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Pengamat \textit{current}}
+	\framesubtitle{Current observer}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Gunakan pengukuran \textbf{terbaru} $y[k]$:
+			\begin{align*}
+				\bar{\mathbf{x}}[k] &= \Phi\hat{\mathbf{x}}[k-1] + \Gamma u[k-1] & \text{(prediksi)}\\
+				\hat{\mathbf{x}}[k] &= \bar{\mathbf{x}}[k] + L_c\big(y[k] - C\bar{\mathbf{x}}[k]\big) & \text{(koreksi)}
+			\end{align*}
+			Dinamika galat: $\tilde{\mathbf{x}}[k+1] = (\Phi - L_cC\Phi)\tilde{\mathbf{x}}[k]$.\\[3pt]
+			Ackermann dengan $C\Phi$ menggantikan $C$:
+			\[
+				L_c = \begin{bmatrix}0{,}7802\\ 2{,}0807\end{bmatrix}\quad\text{(kutub 0,4 dan 0,45)}
+			\]
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{block}{Prediktor vs \textit{current}}
+				\small
+				\begin{itemize}
+					\item \textit{Current}: estimasi lebih segar, cocok bila waktu komputasi $\ll T$.
+					\item Prediktor: seluruh waktu cacah tersedia untuk komputasi; tunda satu cacah.
+					\item Struktur prediksi--koreksi \textit{current} sama dengan filter Kalman (Pertemuan 14).
+				\end{itemize}
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Pengamat Orde Tereduksi dan Prinsip Pemisahan\texorpdfstring{\\[4pt]{\Large\en{Reduced-Order Observers and the Separation Principle}}}{ / Reduced-Order Observers and the Separation Principle}}
+% ===========================================================================
+
+\begin{frame}{Pengamat orde tereduksi}
+	\framesubtitle{Reduced-order observer}
+	\begin{columns}[T]
+		\begin{column}{0.54\textwidth}
+			\small
+			Partisi $\mathbf{x} = [x_a\ \ \mathbf{x}_b]^\top$, $x_a = y$ terukur langsung:
+			\[
+				\begin{bmatrix}x_a\\ \mathbf{x}_b\end{bmatrix}^{\!+} = \begin{bmatrix}\Phi_{aa} & \Phi_{ab}\\ \Phi_{ba} & \Phi_{bb}\end{bmatrix}\begin{bmatrix}x_a\\ \mathbf{x}_b\end{bmatrix} + \begin{bmatrix}\Gamma_a\\ \Gamma_b\end{bmatrix}u
+			\]
+			Estimasi hanya $\mathbf{x}_b$:
+			\begin{align*}
+				\hat{\mathbf{x}}_b^+ &= \Phi_{bb}\hat{\mathbf{x}}_b + \Phi_{ba}y + \Gamma_bu \\
+				&\quad + L_r\big(y^+ - \Phi_{aa}y - \Gamma_au - \Phi_{ab}\hat{\mathbf{x}}_b\big)
+			\end{align*}
+			Galat: $\tilde{\mathbf{x}}_b^+ = (\Phi_{bb} - L_r\Phi_{ab})\tilde{\mathbf{x}}_b$.
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\begin{exampleblock}{Motor posisi}
+				\small
+				$x_a = \theta$, $x_b = \omega$: $\Phi_{bb} = 0{,}8187$, $\Phi_{ab} = 0{,}09063$.\\[3pt]
+				Kutub pengamat $0{,}4$:
+				\[
+					L_r = \frac{0{,}8187 - 0{,}4}{0{,}09063} = 4{,}62
+				\]
+				Pengamat orde 1 saja.
+			\end{exampleblock}
+			{\scriptsize Kelemahan: $y$ dipakai langsung tanpa penyaringan, sehingga derau sensor masuk ke umpan balik.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Prinsip pemisahan}
+	\framesubtitle{The separation principle}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Kontroler memakai estimasi: $u = -K\hat{\mathbf{x}}$. Dalam koordinat $(\mathbf{x}, \tilde{\mathbf{x}})$:
+			\[
+				\begin{bmatrix}\mathbf{x}\\ \tilde{\mathbf{x}}\end{bmatrix}^{\!+} = \begin{bmatrix}\Phi - \Gamma K & \Gamma K\\ 0 & \Phi - LC\end{bmatrix}\begin{bmatrix}\mathbf{x}\\ \tilde{\mathbf{x}}\end{bmatrix}
+			\]
+			Matriks segitiga blok, sehingga
+			\begin{block}{}
+				\small
+				kutub sistem = eig$(\Phi - \Gamma K)$ $\cup$ eig$(\Phi - LC)$
+			\end{block}
+			$K$ dan $L$ dapat dirancang \textbf{terpisah}.
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{exampleblock}{Contoh}
+				\small
+				Kutub kontroler $0{,}7252 \pm j0{,}2130$, kutub pengamat $0{,}40$ dan $0{,}45$. Simulasi sistem gabungan memberi tepat empat kutub ini.
+			\end{exampleblock}
+			\small
+			\textbf{Aturan praktis}: kutub pengamat 2--4 kali lebih cepat (dalam $\zeta\omega_n$) dari kutub kontroler. Terlalu cepat membuat estimasi berderau; terlalu lambat memperlambat seluruh sistem.
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Kompensator ekuivalen}
+	\framesubtitle{Equivalent compensator}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Pengamat + umpan balik keadaan adalah satu sistem dinamis dari $y$ ke $u$:
+			\[
+				D(z) = \frac{U(z)}{-Y(z)} = K\,(zI - \Phi + \Gamma K + LC)^{-1}L
+			\]
+			Untuk contoh (prediktor):
+			\[
+				D(z) = \frac{9{,}336\,z - 7{,}135}{z^2 - 0{,}4816\,z + 0{,}2019}
+			\]
+			Zero di $0{,}764$, kutub kompleks di $|z| = 0{,}449$: perilaku seperti kompensator \textit{lead} orde 2.
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\begin{block}{Makna}
+				\small
+				\begin{itemize}
+					\item Perancangan ruang keadaan menghasilkan kompensator klasik, tetapi secara sistematis.
+					\item Margin kestabilan dapat diperiksa dengan $D(z)G(z)$ seperti biasa.
+					\item Untuk referensi, tambahkan $\bar N$ atau integrator (Pertemuan 12).
+				\end{itemize}
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Implementasi}
+	\framesubtitle{Implementation}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{block}{Pengamat \textit{current} + umpan balik keadaan}
+				\scriptsize
+\begin{verbatim}
+// tiap T, y = posisi terukur (rad)
+// prediksi dengan u sebelumnya
+float thb = th_h + P12*w_h + G1*u_prev;
+float wb  =        P22*w_h + G2*u_prev;
+// koreksi
+float ey = y - thb;
+th_h = thb + Lc1*ey;
+w_h  = wb  + Lc2*ey;
+// kontrol
+float u = constrain(Nbar*r - K1*th_h - K2*w_h, -UMAX, UMAX);
+run_motor(u);
+u_prev = u;      // pakai u yang benar-benar dikirim
+\end{verbatim}
+			\end{block}
+		\end{column}
+		\begin{column}{0.41\textwidth}
+			\small
+			\begin{itemize}
+				\item Gunakan $u$ setelah saturasi untuk pengamat, agar estimasi tetap konsisten saat aktuator jenuh.
+				\item Inisialisasi $\hat\theta$ dengan pengukuran pertama.
+				\item Model yang dipakai harus sama dengan perancangan (kompensasi \textit{deadzone} aktif).
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Ringkasan dan latihan}
+	\framesubtitle{Summary and exercises}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Ringkasan}
+				\small
+				\begin{itemize}
+					\item Prediktor: galat $\Phi - LC$; \textit{current}: galat $\Phi - L_cC\Phi$.
+					\item $L$ dirancang secara dual dengan penempatan kutub.
+					\item Orde tereduksi: estimasi keadaan yang tidak terukur saja.
+					\item Prinsip pemisahan: kutub = kutub kontroler $\cup$ kutub pengamat.
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{PR-6 (bagian 1)}
+				\small
+				\begin{enumerate}
+					\item Hitung $L$ prediktor untuk kutub $0{,}5$ dan $0{,}55$, lalu bandingkan respons galatnya.
+					\item Turunkan dinamika galat pengamat \textit{current}.
+					\item Rancang pengamat orde tereduksi dengan kutub $0{,}3$ dan simulasikan dengan derau.
+					\item Hitung $D(z)$ untuk kombinasi $K$ (Pertemuan 12) dan $L_c$, lalu periksa PM-nya.
+				\end{enumerate}
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\end{document}

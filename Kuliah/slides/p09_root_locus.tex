@@ -1,0 +1,356 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{skd}
+
+\title[Pertemuan 9 -- Root Locus Bidang z]{Perancangan dengan \textit{Root Locus} di Bidang $z$}
+\subtitle{Root-Locus Design in the $z$-Plane}
+\author{Ir. Estiyanti Ekawati, M.T., Ph.D. \quad\textbar\quad Faqihza Mukhlish, S.T., M.T., Ph.D.}
+\institute{Program Studi Teknik Fisika, Fakultas Teknologi Industri, Institut Teknologi Bandung}
+\date{Pertemuan 9 \textbar\ Semester I 2026/2027}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+	\titlepage
+\end{frame}
+
+\begin{frame}{Tujuan pertemuan}
+	\framesubtitle{Learning objectives}
+	\begin{columns}[T]
+		\begin{column}{0.55\textwidth}
+			\begin{enumerate}
+				\item Menggambar \textit{root locus} sistem diskrit dan membacanya terhadap lingkaran satuan.
+				\item Menerjemahkan spesifikasi menjadi kutub kalang tertutup yang diinginkan $z_d$.
+				\item Merancang kompensator \textit{lead} diskrit dengan syarat sudut dan syarat magnitudo.
+				\item Menambahkan aksi integral/\textit{lag} untuk galat tunak.
+				\item Membandingkan perancangan langsung dengan emulasi.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.4\textwidth}
+			\begin{block}{Sub-CPMK S8}
+				\small Merancang kompensator diskrit dengan metode tempat kedudukan akar di bidang $z$.\\[3pt]
+				\en{Design discrete compensators using root locus in the $z$-plane.}
+			\end{block}
+			{\small Bacaan: [OG] 4.4; [PH] 7.5, Bab 8; [FR] 8.6}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{\textit{Root Locus} Diskrit\texorpdfstring{\\[4pt]{\Large\en{Discrete Root Locus}}}{ / Discrete Root Locus}}
+% ===========================================================================
+
+\begin{frame}{Aturan sama, interpretasi berbeda}
+	\framesubtitle{Same rules, different interpretation}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			Persamaan karakteristik $1 + K\,L(z) = 0$, $L(z) = \dfrac{N(z)}{D(z)}$.
+			\begin{block}{Syarat sudut dan magnitudo}
+				\[
+					\angle L(z) = \pm180^\circ(2q+1),\qquad K = \frac{1}{|L(z)|}
+				\]
+			\end{block}
+			Aturan menggambar (sama dengan bidang $s$):
+			\begin{enumerate}
+				\item Mulai di kutub $L$ ($K=0$), berakhir di zero ($K\to\infty$).
+				\item Sumbu riil: di kiri jumlah ganjil kutub+zero.
+				\item Asimtot, titik pisah, sudut keberangkatan.
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{alertblock}{Yang berbeda}
+				\small
+				\begin{itemize}
+					\item Batas stabil: \textbf{lingkaran satuan}, bukan sumbu imajiner.
+					\item Kontur kinerja: spiral $\zeta$ dan lingkaran $|z| = e^{-4T/t_s}$ (Pertemuan 6).
+					\item \textit{Sampling zero} dan tunda ($z^{-d}$, kutub di $z=0$) memengaruhi bentuk lokus.
+				\end{itemize}
+			\end{alertblock}
+			{\scriptsize MATLAB/Python: \texttt{rlocus(G)} untuk \texttt{G} diskrit; \texttt{zgrid} menggambar kontur $\zeta$, $\omega_n$.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Lokus plant posisi dengan kontrol P}
+	\framesubtitle{Root locus of the position plant with P control}
+	\begin{columns}[c]
+		\begin{column}{0.5\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[width=7.4cm,height=7.4cm,axis equal image,xmin=-1.3,xmax=1.3,ymin=-1.3,ymax=1.3,axis lines=middle,xtick={-1,1},ytick={-1,1},tick label style={font=\tiny}]
+					\addplot[skdgray,domain=0:360,samples=80] ({cos(x)},{sin(x)});
+					\addplot[skdblue!40,domain=0:3.14159,samples=60,variable=\t,dashed] ({exp(-0.57735*\t)*cos(deg(\t))},{exp(-0.57735*\t)*sin(deg(\t))});
+					\addplot[skdblue,thick] table[x=x1,y=y1] {data/p9_rlP.dat};
+					\addplot[skdblue,thick] table[x=x2,y=y2] {data/p9_rlP.dat};
+					\addplot[only marks,mark=x,mark size=3pt,thick] coordinates {(1,0) (0.8187,0)};
+					\addplot[only marks,mark=o,mark size=2.5pt,thick] coordinates {(-0.9356,0)};
+					\addplot[only marks,mark=*,mark size=1.8pt,skdorange] coordinates {(0.9015,0.1435) (0.9015,-0.1435)};
+					\node[font=\tiny,text=skdblue] at (axis cs:-0.5,0.55) {$\zeta=0{,}5$};
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\small
+			$L(z) = G_p(z) = \dfrac{0{,}009365(z+0{,}9356)}{(z-1)(z-0{,}8187)}$
+			\begin{itemize}
+				\item Kutub $z=1$ dan $0{,}8187$ bertemu, lalu lokus melingkar mengelilingi zero $-0{,}936$.
+				\item Lokus keluar lingkaran satuan pada $K_p = 20{,}7$ (cocok dengan uji Jury).
+				\item Untuk $\zeta = 0{,}5$: $K_p = 1{,}67$, kutub $0{,}902\pm j0{,}144$ (titik jingga).
+			\end{itemize}
+			\kunci{Dengan P saja, $\zeta=0{,}5$ hanya memberi $t_s \approx 4$\,s. Butuh kompensator agar lebih cepat.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Perancangan Kompensator \textit{Lead}\texorpdfstring{\\[4pt]{\Large\en{Lead Compensator Design}}}{ / Lead Compensator Design}}
+% ===========================================================================
+
+\begin{frame}{Langkah perancangan}
+	\framesubtitle{Design procedure}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\small
+			Kompensator: $D(z) = K_c\,\dfrac{z - z_c}{z - p_c}$\\[4pt]
+			\begin{enumerate}
+				\item Dari spesifikasi, tentukan $s_d = -\zeta\omega_n \pm j\omega_d$, lalu $z_d = e^{s_dT}$.
+				\item Hitung $\angle G(z_d)$. Defisit sudut $\phi = -180^\circ - \angle G(z_d)$ (mod $360^\circ$).
+				\item Pilih $z_c$ (misalnya membatalkan kutub plant yang lambat).
+				\item Hitung $p_c$ agar $\angle(z_d - z_c) - \angle(z_d - p_c) = \phi$.
+				\item $K_c$ dari syarat magnitudo $|D(z_d)G(z_d)| = 1$.
+				\item Verifikasi dengan simulasi (termasuk kutub lain dan respons antar-cacah).
+			\end{enumerate}
+		\end{column}
+		\begin{column}{0.44\textwidth}
+			\centering
+			\begin{tikzpicture}[scale=4.2]
+				\draw[-{Stealth}] (0.45,0) -- (1.1,0);
+				\draw[-{Stealth}] (0.5,-0.05) -- (0.5,0.4);
+				\coordinate (zd) at (0.7701,0.278);
+				\coordinate (zc) at (0.8187,0);
+				\coordinate (pc) at (0.6074,0);
+				\coordinate (p1) at (1,0);
+				\draw[skdgreen,thick] (zc) -- (zd);
+				\draw[skdred,thick] (pc) -- (zd);
+				\draw[skdgray] (p1) -- (zd);
+				\node[mark size=1.5pt,skdorange] at (zd) {\pgfuseplotmark{*}};
+				\node[font=\tiny,anchor=south] at (zd) {$z_d$};
+				\node[font=\tiny] at (zc) {$\circ$};
+				\node[font=\tiny,anchor=north] at (zc) {$z_c$};
+				\node[font=\tiny] at (pc) {$\times$};
+				\node[font=\tiny,anchor=north] at (pc) {$p_c$};
+				\node[font=\tiny] at (p1) {$\times$};
+				\node[font=\tiny,anchor=north] at (p1) {$1$};
+			\end{tikzpicture}\\
+			{\scriptsize Geometri syarat sudut di sekitar $z_d$}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Contoh: \textit{lead} untuk plant posisi (1)}
+	\framesubtitle{Example: lead for the position plant (1)}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			\textbf{Spesifikasi}: $\zeta = 0{,}5$ ($M_p \approx 16\%$), $t_s \le 2$\,s, $T=0{,}1$\,s, $e_{ss}^{\text{tangga}} = 0$.\\[4pt]
+			\textbf{Langkah 1}:
+			\[
+				\zeta\omega_n = \frac{4}{t_s} = 2,\ \ \omega_n = 4,\ \ \omega_d = 3{,}464
+			\]
+			\[
+				z_d = e^{(-2+j3{,}464)(0{,}1)} = 0{,}819\angle19{,}85^\circ = 0{,}770 + j0{,}278
+			\]
+			\textbf{Langkah 2}: $\angle G_p(z_d) = 139{,}74^\circ$ $\Rightarrow$ defisit
+			\[
+				\phi = -180^\circ - 139{,}74^\circ + 360^\circ = 40{,}26^\circ
+			\]
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\small
+			\textbf{Langkah 3}: zero membatalkan kutub plant $z_c = 0{,}8187$:
+			\[
+				\angle(z_d - z_c) = 99{,}92^\circ
+			\]
+			\textbf{Langkah 4}: sudut pole harus
+			\[
+				\angle(z_d - p_c) = 99{,}92^\circ - 40{,}26^\circ = 59{,}66^\circ
+			\]
+			\[
+				p_c = 0{,}770 - \frac{0{,}278}{\tan 59{,}66^\circ} = 0{,}607
+			\]
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Contoh: \textit{lead} untuk plant posisi (2)}
+	\framesubtitle{Example: lead for the position plant (2)}
+	\begin{columns}[T]
+		\begin{column}{0.46\textwidth}
+			\small
+			\textbf{Langkah 5}: syarat magnitudo
+			\[
+				K_c = \frac{1}{\big|G_p(z_d)\frac{z_d-z_c}{z_d-p_c}\big|} = 7{,}18
+			\]
+			\begin{block}{Kompensator}
+				\[
+					D(z) = 7{,}18\,\frac{z - 0{,}8187}{z - 0{,}6074}
+				\]
+				\scriptsize Persamaan beda: $u[k] = 0{,}6074\,u[k-1] + 7{,}18\,e[k] - 5{,}877\,e[k-1]$
+			\end{block}
+			\textbf{Langkah 6}: kutub kalang tertutup $0{,}770\pm j0{,}278$ (dan $0{,}8187$ yang dibatalkan zero).
+		\end{column}
+		\begin{column}{0.5\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=7.6cm,height=5.4cm,xmin=0,xmax=4,ymin=0,ymax=1.3,xlabel={$t$ (s)},ylabel={$y$},legend style={at={(0.98,0.05)},anchor=south east}]
+					\addplot[skdgray,dashed,thin,domain=0:4,forget plot] {1};
+					\addplot[skdblue,const plot] table[x=t,y=ylead] {data/p9_step.dat};
+					\addplot[skdorange,const plot] table[x=t,y=yp] {data/p9_step.dat};
+					\legend{{\textit{lead}: $M_p=16\%$; $t_s=2{,}1$ s},{P ($K_p=1{,}67$): $M_p=16\%$; $t_s=4{,}0$ s}}
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Lokus setelah kompensasi}
+	\framesubtitle{Root locus after compensation}
+	\begin{columns}[c]
+		\begin{column}{0.5\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[width=7.4cm,height=7.4cm,axis equal image,xmin=-1.3,xmax=1.3,ymin=-1.3,ymax=1.3,axis lines=middle,xtick={-1,1},ytick={-1,1},tick label style={font=\tiny}]
+					\addplot[skdgray,domain=0:360,samples=80] ({cos(x)},{sin(x)});
+					\addplot[skdblue!40,domain=0:3.14159,samples=60,variable=\t,dashed] ({exp(-0.57735*\t)*cos(deg(\t))},{exp(-0.57735*\t)*sin(deg(\t))});
+					\addplot[skdred!50,dashed,domain=0:360,samples=80] ({0.8187*cos(x)},{0.8187*sin(x)});
+					\addplot[skdgreen,thick] table[x=x1,y=y1] {data/p9_rlLead.dat};
+					\addplot[skdgreen,thick] table[x=x2,y=y2] {data/p9_rlLead.dat};
+					\addplot[only marks,mark=x,mark size=3pt,thick] coordinates {(1,0) (0.6074,0)};
+					\addplot[only marks,mark=o,mark size=2.5pt,thick] coordinates {(-0.9356,0)};
+					\addplot[only marks,mark=*,mark size=1.8pt,skdorange] coordinates {(0.7701,0.278) (0.7701,-0.278)};
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\small
+			Setelah pembatalan, $D(z)G_p(z) = K_c\,\dfrac{0{,}009365(z+0{,}9356)}{(z-1)(z-0{,}6074)}$.
+			\begin{itemize}
+				\item Titik pisah bergeser ke kiri; lokus melewati $z_d$ (titik jingga) di perpotongan spiral $\zeta=0{,}5$ dan lingkaran $t_s=2$\,s.
+				\item Batas stabil: $K_c \approx 45$, margin penguatan $\approx 6\times$.
+			\end{itemize}
+			\begin{alertblock}{Catatan pembatalan}
+				\scriptsize Pembatalan tidak pernah eksak di perangkat keras: kutub $0{,}8187$ tetap ada sebagai \textit{dipole} lambat. Aman karena berada di dalam lingkaran satuan; \alert{jangan} membatalkan kutub di luar atau pada lingkaran satuan.
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Usaha kontrol}
+	\framesubtitle{Control effort}
+	\begin{columns}[c]
+		\begin{column}{0.54\textwidth}
+			\centering
+			\begin{tikzpicture}
+				\begin{axis}[skd,width=8cm,height=5cm,xmin=0,xmax=4,ymin=-1,ymax=7.5,xlabel={$t$ (s)},ylabel={$u$}]
+					\addplot[skdblue,const plot] table[x=t,y=ulead] {data/p9_step.dat};
+				\end{axis}
+			\end{tikzpicture}
+		\end{column}
+		\begin{column}{0.42\textwidth}
+			\small
+			$u[0] = K_c = 7{,}18$ untuk tangga satuan, karena kompensator \textit{lead} menguatkan perubahan galat.
+			\begin{itemize}
+				\item Pada kit, $u$ dibatasi $\pm100\%$: periksa apakah langkah \textit{setpoint} yang diminta membuat aktuator jenuh.
+				\item Bila jenuh, respons nyata lebih lambat dari desain linier.
+				\item Kompromi: spesifikasi lebih lunak, \textit{setpoint ramp}, atau prefilter.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{Galat Tunak dan Perbandingan Metode\texorpdfstring{\\[4pt]{\Large\en{Steady-State Error and Method Comparison}}}{ / Steady-State Error and Method Comparison}}
+% ===========================================================================
+
+\begin{frame}{Kompensator \textit{lag} dan PI diskrit}
+	\framesubtitle{Discrete lag and PI compensators}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\small
+			\textbf{\textit{Lag}}: $D_{\text{lag}}(z) = \dfrac{z - z_l}{z - p_l}$, dengan $p_l < z_l$ keduanya sangat dekat $z=1$.
+			\begin{itemize}
+				\item Penguatan DC naik sebesar $\dfrac{1-p_l}{1-z_l}$.
+				\item Sudut di $z_d$ hampir nol, sehingga lokus di sekitar $z_d$ tidak berubah.
+			\end{itemize}
+			\textbf{PI diskrit}: $p_l = 1$ (integrator), $e_{ss}=0$ untuk tangga pada plant tipe 0.
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{exampleblock}{Plant kecepatan}
+				\small
+				$G_v$ tipe 0; agar $e_{ss}^{\text{tangga}}=0$ diperlukan PI:
+				\[
+					D(z) = K_c\frac{z - z_c}{z-1}
+				\]
+				Pilih $z_c = a = 0{,}8187$ (membatalkan kutub plant), maka $L(z) = \dfrac{K_cb}{z-1}$ dan kutub kalang tertutup $z = 1 - K_cb$: satu parameter yang mudah ditala.
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Langsung di bidang $z$ atau emulasi?}
+	\framesubtitle{Direct $z$-plane design or emulation?}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Perancangan langsung (hari ini)}
+				\small
+				\begin{itemize}
+					\item Memperhitungkan ZOH dan $T$ secara eksak.
+					\item Tetap valid untuk $T$ relatif besar.
+					\item Perlu model $G(z)$ dan alat bidang $z$.
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Emulasi (Pertemuan 5)}
+				\small
+				\begin{itemize}
+					\item Intuisi kontinu, mudah dikomunikasikan.
+					\item Kinerja turun bila $\omega_s < 20\omega_b$.
+					\item Perlu verifikasi diskrit setelah konversi.
+				\end{itemize}
+			\end{block}
+		\end{column}
+	\end{columns}
+	\vspace{0.2cm}
+	\kunci{Pada Modul 3 (kontrol posisi), bandingkan PID hasil emulasi/penalaan dengan kompensator \textit{lead} hasil \textit{root locus} diskrit: kinerja, usaha kontrol, dan ketahanan terhadap gangguan.}
+\end{frame}
+
+\begin{frame}{Ringkasan dan latihan}
+	\framesubtitle{Summary and exercises}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\begin{block}{Ringkasan}
+				\small
+				\begin{itemize}
+					\item Aturan \textit{root locus} sama; batas stabil = lingkaran satuan.
+					\item Spesifikasi $\rightarrow$ $z_d = e^{s_dT}$.
+					\item \textit{Lead}: syarat sudut untuk $p_c$, magnitudo untuk $K_c$.
+					\item \textit{Lag}/PI untuk galat tunak; jangan membatalkan kutub tidak stabil.
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{exampleblock}{PR-4 (ringkas)}
+				\small
+				\begin{enumerate}
+					\item Ulangi perancangan \textit{lead} untuk $\zeta = 0{,}7$, $t_s = 1{,}5$\,s.
+					\item Rancang PI diskrit untuk plant kecepatan agar $t_s = 0{,}6$\,s tanpa lewatan.
+					\item Gambarkan lokus plant posisi dengan tunda komputasi $z^{-1}$ dan tentukan $K_{p,\max}$.
+					\item Simulasikan rancangan nomor 1 dengan batas $|u| \le 1$ dan komentari.
+				\end{enumerate}
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\end{document}

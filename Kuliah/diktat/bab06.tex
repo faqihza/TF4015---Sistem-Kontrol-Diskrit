@@ -1,0 +1,97 @@
+\chapter{Analisis Respons di Bidang $z$}
+\label{bab:responsz}
+\enchap{Response Analysis in the $z$-Plane}
+
+\begin{tujuan}
+	Setelah mempelajari bab ini, Anda mampu memetakan bidang $s$ ke bidang $z$, menghubungkan lokasi kutub diskrit dengan bentuk respons, menerjemahkan spesifikasi menjadi daerah kutub, menghitung galat keadaan tunak dari tipe sistem, dan menghitung indeks kinerja integral dari data diskrit.
+\end{tujuan}
+
+\section{Pemetaan $z = e^{sT}$}
+Kutub kontinu $s = \sigma + j\omega$ dipetakan ke kutub diskrit
+\begin{equation}
+	z = e^{sT} = e^{\sigma T}e^{j\omega T},\qquad |z| = e^{\sigma T},\quad \angle z = \omega T.
+\end{equation}
+Akibatnya sumbu $j\omega$ menjadi lingkaran satuan $|z| = 1$, setengah bidang kiri menjadi bagian dalam lingkaran satuan, $s = 0$ menjadi $z = 1$, garis $\sigma$ konstan menjadi lingkaran $|z| = e^{\sigma T}$, garis $\omega$ konstan menjadi garis radial bersudut $\omega T$, dan $\omega = \pm\omega_s/2$ menjadi sumbu riil negatif. Pemetaan ini banyak-ke-satu: $s$ dan $s + jn\omega_s$ menghasilkan $z$ yang sama, sehingga hanya jalur primer $|\omega| < \omega_s/2$ yang bermakna. Contoh dengan $T = 0{,}1$\,s: $s = -2$ menjadi $z = 0{,}819$; $s = -20$ menjadi $z = 0{,}135$ (kutub cepat dekat titik asal); $s = -2 \pm j3{,}46$ menjadi $z = 0{,}819\angle\pm19{,}8^\circ$.
+
+Untuk kutub orde dua $s = -\zeta\omega_n \pm j\omega_n\sqrt{1-\zeta^2}$,
+\begin{equation}
+	z = e^{-\zeta\omega_nT}\angle\pm\omega_nT\sqrt{1-\zeta^2}.
+\end{equation}
+Kurva $\zeta$ konstan adalah spiral logaritmik yang berawal di $z = 1$, dan kurva $\omega_nT$ konstan memotongnya (Gambar~\ref{fig:b6-kontur}). Sebaliknya, dari kutub diskrit $z = re^{\pm j\theta}$:
+\begin{equation}
+	\zeta = \frac{-\ln r}{\sqrt{\ln^2r + \theta^2}},\qquad \omega_n = \frac{\sqrt{\ln^2r + \theta^2}}{T}.
+	\label{eq:b6-inv}
+\end{equation}
+Misalnya kutub $z = 0{,}6 \pm j0{,}3$ dengan $T = 0{,}1$\,s memberi $r = 0{,}671$, $\theta = 0{,}464$ rad, sehingga $\zeta = 0{,}65$ dan $\omega_n = 6{,}12$ rad/s.
+
+\begin{figure}[H]
+	\centering
+	\begin{tikzpicture}
+		\begin{axis}[width=9cm,height=9cm,axis equal image,xmin=-1.1,xmax=1.1,ymin=0,ymax=1.1,axis lines=middle,xtick={-1,-0.5,0.5,1},ytick={0.5,1},tick label style={font=\scriptsize}]
+			\addplot[skdgray,domain=0:180,samples=60] ({cos(x)},{sin(x)});
+			\foreach \zt in {0.1,0.3,0.5,0.7,0.9} {
+					\addplot[skdblue,domain=0:3.14159,samples=60,variable=\t] ({exp(-\zt*\t/sqrt(1-\zt^2))*cos(deg(\t))},{exp(-\zt*\t/sqrt(1-\zt^2))*sin(deg(\t))});
+				}
+			\foreach \wn in {0.31416,0.62832,0.94248,1.25664,1.5708} {
+					\addplot[skdorange,domain=0:0.999,samples=40,variable=\zz] ({exp(-\zz*\wn)*cos(deg(\wn*sqrt(1-\zz^2)))},{exp(-\zz*\wn)*sin(deg(\wn*sqrt(1-\zz^2)))});
+				}
+			\node[font=\scriptsize,text=skdblue] at (axis cs:-0.62,0.86) {$\zeta=0{,}1$};
+			\node[font=\scriptsize,text=skdblue] at (axis cs:0.05,0.35) {$0{,}5$};
+			\node[font=\scriptsize,text=skdorange] at (axis cs:0.22,0.98) {$\omega_nT=\pi/2$};
+		\end{axis}
+	\end{tikzpicture}
+	\caption{Kontur $\zeta$ konstan (biru) dan $\omega_nT$ konstan (jingga) di bidang $z$}
+	\label{fig:b6-kontur}
+\end{figure}
+
+\section{Lokasi kutub dan bentuk respons}
+Kutub $z = re^{\pm j\theta}$ menghasilkan suku respons $r^k\cos(\theta k + \phi)$. Jari-jari $r$ menentukan laju peluruhan, sedangkan sudut $\theta$ menentukan jumlah sampel per periode osilasi, yaitu $2\pi/\theta$. Kutub riil positif dekat titik asal meluruh dalam beberapa cacah; kutub riil positif dekat $z = 1$ meluruh lambat; kutub riil negatif menghasilkan respons yang bergantian tanda setiap cacah (perilaku yang tidak punya padanan pada sistem kontinu orde satu); kutub di luar lingkaran satuan menghasilkan respons yang membesar. Kutub di $z = 0$ adalah tunda murni satu cacah.
+
+\paragraph{Kutub dominan dan zero.} Kutub yang paling dekat dengan lingkaran satuan meluruh paling lambat dan disebut \term{kutub dominan}{dominant poles}. Rumus orde dua akurat bila kutub lain jauh lebih cepat (jari-jari jauh lebih kecil). Zero dekat $z = 1$ memperbesar lewatan, zero di sumbu riil negatif memengaruhi perilaku antar-cacah, dan pasangan kutub--zero yang berdekatan saling meniadakan tetapi dapat meninggalkan ekor lambat.
+
+\section{Spesifikasi sebagai daerah kutub}
+Spesifikasi kontinu diterjemahkan ke bidang $z$ sebagai berikut:
+\begin{itemize}
+	\item $t_s \approx 4/(\zeta\omega_n)$ memberi batas jari-jari $r \le e^{-4T/t_s}$;
+	\item $M_p$ memberi batas $\zeta$, yaitu daerah di dalam spiral $\zeta$;
+	\item batas $\omega_d$ (atau waktu puncak) memberi batas sudut.
+\end{itemize}
+Daerah yang diinginkan adalah irisan semuanya. Untuk $M_p \le 16\%$ ($\zeta \ge 0{,}5$) dan $t_s \le 2$\,s dengan $T = 0{,}1$\,s, batas jari-jarinya $e^{-0{,}2} = 0{,}819$; kutub $0{,}770 \pm j0{,}278$ berada tepat di batas dengan $\zeta = 0{,}50$ dan $\omega_n = 4{,}0$ rad/s. Daerah ini menjadi target perancangan di Bab~\ref{bab:rlocus} dan Bab~\ref{bab:pp}.
+
+\begin{contoh}[Kontrol P kecepatan motor]
+	Dengan $G_v(z) = b/(z-a)$ dan $D(z) = K_p$,
+	\[
+		\frac{Y(z)}{R(z)} = \frac{K_pb}{z - a + K_pb},\qquad z_{cl} = a - K_pb.
+	\]
+	Untuk $K_p = 2$: $z_{cl} = 0{,}8187 - 2(0{,}1813) = 0{,}4562$, setara dengan konstanta waktu $-T/\ln z_{cl} = 0{,}127$\,s (plant: 0,5\,s). Nilai akhir $K_pK/(1+K_pK) = 0{,}667$ dan galat tunak $1/(1+K_pK) = 0{,}333$. Bila $K_p > a/b = 4{,}52$, $z_{cl}$ menjadi negatif dan respons bergantian tanda.
+\end{contoh}
+
+\section{Galat keadaan tunak}
+Untuk umpan balik satuan dengan $L(z) = D(z)G(z)$, galat adalah $E(z) = R(z)/(1+L(z))$ dan $e_{ss} = \lim_{z\to1}(z-1)E(z)$. \term{Tipe sistem}{system type} adalah jumlah kutub $L(z)$ di $z = 1$. Konstanta galat diskrit didefinisikan sebagai
+\begin{equation}
+	K_p = \lim_{z\to1}L(z),\qquad K_v = \lim_{z\to1}\frac{(z-1)L(z)}{T},\qquad K_a = \lim_{z\to1}\frac{(z-1)^2L(z)}{T^2},
+\end{equation}
+dengan $e_{ss} = 1/(1+K_p)$ untuk tangga, $1/K_v$ untuk \textit{ramp} $kT$, dan $1/K_a$ untuk parabola. Untuk plant posisi dengan kontrol P (tipe 1), galat tangga nol; karena $(z-1)G_p(z)|_{z=1} = (b_1+b_0)/(1-a) = 0{,}1 = KT$, diperoleh $K_v = K_pK$ dan $e_{ss}^{\text{ramp}} = 1/(K_pK)$. Hasil ini sama dengan kasus kontinu karena ekuivalen ZOH mempertahankan penguatan DC.
+
+\section{Indeks kinerja integral}
+Dari data diskrit dengan periode $T$, indeks kinerja dihitung sebagai
+\begin{equation}
+	\text{IAE} = T\sum_k|e[k]|,\qquad \text{ISE} = T\sum_ke[k]^2,\qquad \text{ITAE} = T^2\sum_kk\,|e[k]|.
+\end{equation}
+ISE menghukum galat besar di awal respons, ITAE menghukum galat yang bertahan lama, dan penambahan $\sum u[k]^2$ memasukkan usaha kontrol (dasar LQR di Bab~\ref{bab:lqr}). Dalam laporan praktikum, setiap uji sebaiknya dilaporkan dengan $t_r$, $t_s$ (2\%), $M_p$, $e_{ss}$, IAE, dan $u_{\max}$.
+
+\begin{ringkasan}
+	$z = e^{sT}$ memetakan setengah bidang kiri ke dalam lingkaran satuan. Jari-jari kutub menentukan peluruhan dan sudutnya menentukan frekuensi osilasi. Spesifikasi menjadi irisan lingkaran ($t_s$) dan spiral ($\zeta$). Tipe sistem adalah jumlah kutub di $z = 1$.\\[3pt]
+	\en{The mapping $z = e^{sT}$ takes the left half-plane into the unit disc; pole radius sets decay, pole angle sets oscillation frequency; specifications become a region bounded by a circle and a $\zeta$-spiral; system type counts poles at $z = 1$.}
+\end{ringkasan}
+
+\paragraph{Istilah kunci.} bidang $z$ \en{($z$-plane)}, lingkaran satuan \en{(unit circle)}, kutub dominan \en{(dominant poles)}, tipe sistem \en{(system type)}, konstanta galat \en{(error constants)}, indeks kinerja \en{(performance index)}.
+
+\section*{Latihan}
+\begin{enumerate}
+	\item Hitung $\zeta$ dan $\omega_n$ dari kutub $z = 0{,}6 \pm j0{,}3$ dengan $T = 0{,}1$\,s menggunakan Persamaan~\eqref{eq:b6-inv}.
+	\item Gambarkan daerah kutub untuk $M_p \le 5\%$ dan $t_s \le 1$\,s dengan $T = 0{,}05$\,s.
+	\item Untuk plant kecepatan dengan kontrol P, cari $K_p$ agar $e_{ss} \le 0{,}1$. Di mana kutubnya, dan bagaimana bentuk responsnya?
+	\item Tunjukkan bahwa $(z-1)G_p(z)|_{z=1} = KT$.
+	\item Hitung IAE, ISE, dan ITAE dari data respons Modul 1 atau 2.
+\end{enumerate}
