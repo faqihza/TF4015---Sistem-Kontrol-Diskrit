@@ -150,7 +150,7 @@ Setelah menyelesaikan Modul 4, praktikan diharapkan mampu:
 2 & Laptop dengan Arduino IDE dan \textit{library} Adafruit MCP4725 & Milik praktikan \\
 3 & MATLAB (desktop atau MATLAB Online) & Milik praktikan \\
 4 & Perangkat lunak \textit{spreadsheet} & Milik praktikan \\
-5 & Program: tab baru \prog{6\_state\_space.ino} dan program utama \prog{11\_main\_state\_space} & Unduh dari repositori \\
+5 & Sketch lengkap \prog{SKD\_Modul4} (seluruh tab, termasuk \prog{6\_state\_space.ino} dan program utama \prog{9\_main.ino}) & Unduh dari repositori \\
 6 & Skrip MATLAB \prog{desain\_state\_space.m} dan \prog{analisis\_observer.m} & Unduh dari repositori \\
 7 & Model Modul 1 ($K$, $\tau$, $\theta$), faktor konversi $C$ (Modul 3), dan pengontrol posisi terbaik (Modul 3) & Hasil praktikum sebelumnya \\
 \hline
@@ -160,7 +160,8 @@ Setelah menyelesaikan Modul 4, praktikan diharapkan mampu:
 \subsection{Persiapan Praktikum}
 \begin{enumerate}
 \item Siapkan parameter model $K$, $\tau$, $\theta$ (Modul 1) dan faktor konversi $C$ hasil eksperimen (Modul 3).
-\item Tambahkan tab \prog{6\_state\_space.ino} (Kode~\ref{lst:ss}) ke folder program. Pada Arduino IDE, tab baru dapat dibuat melalui menu panah di sebelah kanan deretan tab.
+\item Buka sketch \prog{SKD\_Modul4} pada Arduino IDE. Sketch ini sudah berisi seluruh tab yang dibutuhkan (Kode~\ref{lst:ss} dan Kode~\ref{lst:main}), sehingga tidak ada tab yang perlu diganti. Pastikan \textit{library} Adafruit MCP4725 terpasang, lalu lakukan \textit{Verify}.
+\item Isi \texttt{DeadZonePositif} dan \texttt{DeadZoneNegatif} pada tab \prog{4\_compensation.ino} dengan nilai hasil Modul 1 atau Modul 3.
 \item Jalankan skrip \prog{desain\_state\_space.m} (Kode~\ref{lst:desain}) dengan model kelompok dan pahami hasil simulasinya.
 \item Baca prosedur dan bagian analisis, lalu bagi tugas dalam kelompok.
 \end{enumerate}
@@ -294,14 +295,18 @@ dengan arah diambil dari variabel \texttt{Direction} pada tab \prog{2\_actuator.
 Bila umpan balik keadaan menggunakan keadaan perkiraan, $u = -\mathbf{K}\hat{x}$, kutub sistem kalang tertutup gabungan adalah gabungan kutub $A - B\mathbf{K}$ dan kutub $A - LC_y$. Dengan demikian, pengontrol dan observer dapat dirancang secara terpisah. Prinsip ini berlaku untuk model linier yang tepat; ketidaktepatan model, waktu tunda, saturasi, dan \textit{deadzone} pada kit dapat membuat hasilnya berbeda.
 
 \subsection{Implementasi pada Program}
-Pada setiap waktu cacah, program \prog{11\_main\_state\_space} melakukan langkah berikut:
+Seluruh pengaturan percobaan berada pada bagian \texttt{KONFIGURASI} di awal tab \prog{9\_main.ino}: pilihan \texttt{Mode}, \texttt{UseObserver}, \texttt{TimeSampling}, \texttt{HoldTime}, \texttt{Repeat}, \texttt{UMax}, \texttt{ErrorBand}, urutan masukan atau set point untuk tiap mode (\texttt{Sequence0}, \texttt{Sequence1}, \texttt{Sequence2}), serta fungsi \texttt{gain\_setup()} tempat gain hasil desain disalin. Program menyediakan empat mode, yaitu Mode~0 (kalang terbuka), Mode~1 (pole placement kecepatan), Mode~2 (pole placement posisi), dan Mode~3 (PID posisi Modul 3 sebagai pembanding). Saat dimulai, program mencetak konfigurasi dan matriks $A$, $B$ pada baris yang diawali \texttt{\#}, sehingga setiap file data mencatat pengaturan yang dipakai.
+
+Pada setiap waktu cacah, program melakukan langkah berikut:
 \begin{enumerate}
 \item Membaca posisi $y_p[k]$ dan tachometer, lalu menghitung kecepatan bertanda $v_m[k]$.
 \item Menghitung aksi kontrol $u[k]$ sesuai mode, menggunakan $\hat{x}[k]$ (bila observer dipakai) atau pengukuran langsung, lalu membatasinya.
 \item Memberikan $u[k]$ ke motor melalui kompensasi \textit{deadzone}.
 \item Memperbarui kedua observer dengan Persamaan~\eqref{eq:observer} untuk memperoleh $\hat{x}[k+1]$.
 \end{enumerate}
-Model menggunakan masukan sebelum kompensasi $u$, sama seperti model Modul 1. Matriks $A$ dan $B$ dihitung otomatis oleh fungsi \texttt{state\_space\_setup()} dari \texttt{ModelK}, \texttt{ModelTau}, \texttt{ModelC}, dan waktu cacah.
+Model menggunakan masukan sebelum kompensasi $u$, sama seperti model Modul 1. Matriks $A$ dan $B$ dihitung otomatis oleh fungsi \texttt{state\_space\_setup()} dari \texttt{ModelK}, \texttt{ModelTau}, \texttt{ModelC}, dan waktu cacah, lalu disimpan pada variabel \texttt{Ad12}, \texttt{Ad22}, \texttt{Bd1}, dan \texttt{Bd2}. Nama \texttt{B1} tidak dapat dipakai karena sudah didefinisikan oleh Arduino sebagai konstanta biner.
+
+\catatan{Kompensasi \textit{deadzone} sangat memengaruhi pole placement posisi. Di sekitar set point, aksi kontrol $u = -k_1 e - k_2 v$ bernilai kecil. Bila \textit{deadzone} terkompensasi kurang, motor berhenti sebelum mencapai set point dan timbul offset posisi.}
 
 \section{Keselamatan Kerja}
 Seluruh ketentuan keselamatan kerja dan SOP pada modul sebelumnya tetap berlaku. Perhatikan pula hal-hal berikut:
@@ -361,7 +366,7 @@ Observer B & $\tau_v$ = & & $L_{v1}$ = \quad $L_{v2}$ = \\
 
 \subsection{Percobaan 2: Pole Placement Kecepatan}
 \begin{enumerate}
-\item Ganti tab \prog{9\_main.ino} dengan program \prog{11\_main\_state\_space} (Kode~\ref{lst:main}). Salin baris hasil skrip ke \texttt{setup()}, atur \texttt{TimeSampling} sesuai desain, \texttt{Mode = 1}, dan \texttt{Sequence = \{0, 40, 70, 30, 0\}}.
+\item Pada tab \prog{9\_main.ino} (Kode~\ref{lst:main}), salin baris hasil skrip desain ke fungsi \texttt{gain\_setup()}. Pada bagian \texttt{KONFIGURASI}, atur \texttt{TimeSampling} sesuai desain dan \texttt{Mode = 1}. Urutan set point yang digunakan adalah \texttt{Sequence1 = \{0, 40, 70, 30, 0\}}.
 \item Verifikasi tanpa daya motor bahwa $U = N r$ ketika kecepatan nol, lalu jalankan dengan daya motor dan simpan datanya.
 \item Ulangi dengan konstanta waktu kalang tertutup lain (misalnya $\tau_c$ dua kali lebih kecil).
 \item Untuk setiap perubahan set point, ukur konstanta waktu kalang tertutup (waktu mencapai 63,2\% perubahan) dan offset. Lengkapi Tabel~\ref{tab:p2_kecepatan}.
@@ -392,11 +397,11 @@ Observer B & $\tau_v$ = & & $L_{v1}$ = \quad $L_{v2}$ = \\
 
 \subsection{Percobaan 3: Uji Observer pada Kalang Terbuka}
 \begin{enumerate}
-\item Atur \texttt{Mode = 0}. Pilih masukan kecil $u_{kecil}$ yang membuat motor berputar pelan tetapi tachometer masih membaca nol atau hampir nol (lihat spesifikasi kit pada Modul 1). Atur \texttt{Sequence = \{0, }$u_{kecil}$\texttt{, 0, 30, 0, -30, 0, 60, 0, -60, 0\}}.
+\item Atur \texttt{Mode = 0}. Pilih masukan kecil $u_{kecil}$ yang membuat motor berputar pelan tetapi tachometer masih membaca nol atau hampir nol (lihat spesifikasi kit pada Modul 1). Ganti nilai \texttt{12} pada \texttt{Sequence0 = \{0, 12, 0, 30, 0, -30, 0, 60, 0, -60, 0\}} dengan $u_{kecil}$.
 \item Verifikasi tanpa daya motor, lalu jalankan dan simpan data ke file \prog{data\_observer.txt}. Program mencetak posisi terukur, posisi perkiraan observer A (\texttt{PosHat}), posisi perkiraan observer B (\texttt{PosHatT}), kecepatan bertanda dari tachometer (\texttt{VelT}), kecepatan perkiraan observer A (\texttt{VelHat}), dan masukan.
 \item Jalankan skrip \prog{analisis\_observer.m} (Kode~\ref{lst:analisis}) untuk membandingkan $\hat{v}$ dengan kecepatan tachometer dan dengan turunan numerik posisi, serta $\hat{p}$ observer B dengan posisi terukur.
 \item Ulangi dengan observer A yang lebih lambat dan yang lebih cepat (ubah \texttt{TsObs} pada skrip desain, lalu salin gain baru). Lengkapi Tabel~\ref{tab:p3_observer}.
-\item \textbf{Uji simpangan observer B}: jalankan urutan yang lebih panjang (misalnya ulangi urutan masukan dua hingga tiga kali). Catat error posisi observer B pada awal dan akhir percobaan.
+\item \textbf{Uji simpangan observer B}: atur \texttt{Repeat = 3} agar urutan masukan diulang tiga kali, lalu jalankan kembali. Catat error posisi observer B pada awal dan akhir percobaan.
 \end{enumerate}
 
 \begin{table}[H]
@@ -419,11 +424,12 @@ Observer B & $\tau_v$ = & & $L_{v1}$ = \quad $L_{v2}$ = \\
 
 \subsection{Percobaan 4: Pole Placement Posisi dengan Observer}
 \begin{enumerate}
-\item Atur \texttt{Mode = 2}, \texttt{UseObserver = true}, batas \texttt{UMax} sesuai Modul 3, gain Desain 1, dan \texttt{Sequence = \{50, 20, 50, 90, 20, 50\}}.
+\item Atur \texttt{Mode = 2}, \texttt{UseObserver = true}, \texttt{Repeat = 1}, batas \texttt{UMax} sesuai Modul 3, dan gain Desain 1. Urutan set point yang digunakan adalah \texttt{Sequence2 = \{50, 20, 50, 90, 20, 50\}}.
 \item Verifikasi tanpa daya motor, lalu jalankan dan simpan datanya. Hitung performa untuk perubahan set point $50 \rightarrow 20$ dan $20 \rightarrow 50$.
 \item Ulangi dengan gain Desain 2.
 \item Ulangi Desain 1 dengan \texttt{UseObserver = false}, sehingga kecepatan umpan balik diambil dari tachometer bertanda.
-\item Lengkapi Tabel~\ref{tab:p4_posisi}. Tambahkan pengontrol posisi terbaik dari Modul 3 sebagai pembanding.
+\item Atur \texttt{Mode = 3} dan isi \texttt{Kp}, \texttt{Ki}, \texttt{Kd} pada \texttt{gain\_setup()} dengan pengontrol posisi terbaik Modul 3 (gunakan \texttt{UMax} dan \texttt{ErrorBand} yang sama dengan Modul 3). Jalankan sebagai pembanding.
+\item Lengkapi Tabel~\ref{tab:p4_posisi}.
 \item \textbf{Uji gangguan}: dengan desain terbaik, setelah urutan selesai set point terakhir dipertahankan. Berikan gangguan dengan memutar roda gigi potensiometer sedikit, lalu lepaskan. Simpan responsnya.
 \end{enumerate}
 
@@ -541,7 +547,7 @@ Tugas tambahan bersifat opsional dan dapat ditambahkan pada laporan untuk nilai 
 \appendix
 \section{Kode Program Pendukung}
 \label{lamp:kode}
-Tab \prog{6\_state\_space.ino} ditambahkan ke folder program. Program utama \prog{11\_main\_state\_space} menggantikan isi tab \prog{9\_main.ino}. Tab lain tetap sama seperti pada Modul 3.
+Sketch \prog{SKD\_Modul4} terdiri atas tab \prog{SKD\_Modul4.ino}, \prog{1\_sensor.ino}, \prog{2\_actuator.ino}, \prog{3\_serial.ino}, \prog{4\_compensation.ino}, \prog{5\_control.ino}, \prog{6\_state\_space.ino}, dan \prog{9\_main.ino}. Tab \prog{1\_sensor.ino} hingga \prog{5\_control.ino} sama dengan Modul 3. Berikut ditampilkan tab yang baru pada Modul 4. Isi tab \prog{9\_main.ino} sama dengan program \prog{11\_main\_state\_space} pada folder program praktikum.
 
 \begin{lstlisting}[caption={Tab \texttt{6\_state\_space.ino}},label={lst:ss}]
 // ===========================================================================
@@ -550,19 +556,20 @@ Tab \prog{6\_state\_space.ino} ditambahkan ke folder program. Program utama \pro
 // Keadaan x = [posisi (%); kecepatan bertanda (%)], masukan u (%).
 // Model diskrit (ZOH, waktu tunda diabaikan):
 //   x[k+1] = A x[k] + B u[k]
-//   A = [1  A12; 0  A22],  B = [B1; B2]
+//   A = [1  Ad12; 0  Ad22],  B = [Bd1; Bd2]
 // Parameter model berasal dari Modul 1 (ModelK, ModelTau) dan Modul 3
-// (ModelC). Gain dihitung dengan skrip desain_state_space.m.
+// (ModelC). Gain dihitung dengan skrip desain_state_space.m dan diisikan pada
+// fungsi gain_setup() di tab 9_main.ino.
 // ===========================================================================
 
 // Parameter model (Tau dalam ms, C dalam %/ms per % kecepatan)
 float ModelK = 0.85, ModelTau = 60.0, ModelC = 0.02;
-float A12 = 0.0, A22 = 0.0, B1 = 0.0, B2 = 0.0;
+float Ad12 = 0.0, Ad22 = 0.0, Bd1 = 0.0, Bd2 = 0.0;
 
 // Pole placement kecepatan (satu keadaan): u = Nspeed*r - Kspeed*v
 float Kspeed = 0.0, Nspeed = 1.0;
 
-// Pole placement posisi (dua keadaan): u = -(Kpos*(p - r) + Kvel*v)
+// Pole placement posisi (dua keadaan): u = -(Kpos*wrap(p - r) + Kvel*v)
 float Kpos = 0.5, Kvel = 0.25;
 
 // Observer A: keluaran terukur posisi (potensiometer) -> estimasi kecepatan
@@ -573,20 +580,23 @@ float PosHat = 0.0, VelHat = 0.0;
 float Lv1 = 0.0, Lv2 = 0.0;
 float PosHatT = 0.0, VelHatT = 0.0;
 
+// Menghitung matriks A dan B diskrit dari parameter model dan waktu cacah Ts (ms)
 void state_space_setup(unsigned int Ts) {
   float a = exp(-(float) Ts / ModelTau);
-  A12 = ModelC * ModelTau * (1.0 - a);
-  A22 = a;
-  B1 = ModelC * ModelK * ((float) Ts - ModelTau * (1.0 - a));
-  B2 = ModelK * (1.0 - a);
+  Ad12 = ModelC * ModelTau * (1.0 - a);
+  Ad22 = a;
+  Bd1 = ModelC * ModelK * ((float) Ts - ModelTau * (1.0 - a));
+  Bd2 = ModelK * (1.0 - a);
 }
 
+// Membatasi error posisi pada rentang -50 hingga 50 (jalur terpendek)
 float wrap_error(float e) {
   while (e > 50.0) e -= 100.0;
   while (e < -50.0) e += 100.0;
   return e;
 }
 
+// Menjaga posisi pada rentang 0 hingga 100
 float wrap_position(float p) {
   while (p >= 100.0) p -= 100.0;
   while (p < 0.0) p += 100.0;
@@ -605,66 +615,143 @@ void observer_reset(float Position, float Velocity) {
 void observer_update(float PositionMeasured, float VelocityMeasured, float U) {
   // Observer A: koreksi berdasarkan error posisi (dibatasi -50 hingga 50)
   float Innovation = wrap_error(PositionMeasured - PosHat);
-  float NextPos = PosHat + A12 * VelHat + B1 * U + Lp1 * Innovation;
-  float NextVel = A22 * VelHat + B2 * U + Lp2 * Innovation;
+  float NextPos = PosHat + Ad12 * VelHat + Bd1 * U + Lp1 * Innovation;
+  float NextVel = Ad22 * VelHat + Bd2 * U + Lp2 * Innovation;
   PosHat = wrap_position(NextPos);
   VelHat = NextVel;
 
   // Observer B: koreksi berdasarkan error kecepatan
   float InnovationT = VelocityMeasured - VelHatT;
-  float NextPosT = PosHatT + A12 * VelHatT + B1 * U + Lv1 * InnovationT;
-  float NextVelT = A22 * VelHatT + B2 * U + Lv2 * InnovationT;
+  float NextPosT = PosHatT + Ad12 * VelHatT + Bd1 * U + Lv1 * InnovationT;
+  float NextVelT = Ad22 * VelHatT + Bd2 * U + Lv2 * InnovationT;
   PosHatT = wrap_position(NextPosT);
   VelHatT = NextVelT;
 }
 \end{lstlisting}
 
-\begin{lstlisting}[caption={Program utama \texttt{11\_main\_state\_space}},label={lst:main}]
+\begin{lstlisting}[caption={Tab \texttt{9\_main.ino} (program utama \texttt{11\_main\_state\_space})},label={lst:main}]
 // ===========================================================================
-// Program utama Modul 4: pole placement dan observer
-// Ganti isi tab 9_main.ino dengan program ini. Tab 6_state_space.ino harus
-// sudah ditambahkan.
+// Program utama Modul 4: pole placement dan observer (11_main_state_space)
+// Isi tab 9_main.ino pada sketch SKD_Modul4.
 //
-// Mode = 0 : kalang terbuka. Sequence[] berisi masukan motor (%). Digunakan
-//            untuk menguji kedua observer.
-// Mode = 1 : pole placement kecepatan. Sequence[] berisi set point kecepatan
-//            (%, positif saja).
-// Mode = 2 : pole placement posisi. Sequence[] berisi set point posisi (%).
-//            Kecepatan umpan balik dari observer (UseObserver = true) atau
-//            dari tachometer bertanda (UseObserver = false). Setelah urutan
-//            selesai, set point terakhir dipertahankan.
+// Mode 0 : kalang terbuka. Urutan berisi masukan motor (%). Untuk menguji
+//          kedua observer (Percobaan 3).
+// Mode 1 : pole placement kecepatan. Urutan berisi set point kecepatan
+//          (%, positif saja) (Percobaan 2).
+// Mode 2 : pole placement posisi. Urutan berisi set point posisi (%).
+//          Kecepatan umpan balik dari observer A (UseObserver = true) atau
+//          dari tachometer bertanda (UseObserver = false) (Percobaan 4).
+// Mode 3 : PID posisi dengan parameter terbaik Modul 3, sebagai pembanding
+//          (Percobaan 4). Kedua observer tetap berjalan.
+// Pada Mode 2 dan 3, setelah urutan selesai set point terakhir dipertahankan
+// (uji gangguan). Pada Mode 0 dan 1, motor dihentikan.
+//
+// Kolom data: Time | Delta | Ref | Pos | PosHat | PosHatT | VelT | VelHat | U
+//   Ref     : masukan (Mode 0) atau set point (Mode 1-3)
+//   Pos     : posisi terukur potensiometer (%)
+//   PosHat  : estimasi posisi observer A (dari potensiometer)
+//   PosHatT : estimasi posisi observer B (dari tachometer)
+//   VelT    : kecepatan bertanda dari tachometer (%)
+//   VelHat  : estimasi kecepatan observer A (%)
+//   U       : masukan kontrol sebelum kompensasi deadzone (%)
+// Baris yang diawali '#' berisi konfigurasi percobaan dan bukan data.
+// ===========================================================================
+
+// ============================ KONFIGURASI ==================================
+byte Mode = 2;                     // 0, 1, 2, atau 3 (lihat keterangan di atas)
+bool UseObserver = true;           // Mode 2: true = observer A, false = tachometer
+unsigned int TimeSampling = 10;    // waktu cacah (ms), sama dengan desain
+unsigned int HoldTime = 3000;      // lama tiap nilai urutan (ms)
+byte Repeat = 1;                   // jumlah pengulangan urutan (uji simpangan observer B)
+float UMax = 40.0;                 // batas masukan kontrol posisi (%), Mode 2 dan 3
+float ErrorBand = 0.0;             // pita error posisi (%), Mode 2 dan 3
+
+// Urutan tiap mode. Mode 0: ganti 12 dengan u_kecil kelompok. Urutan Mode 0
+// harus melewati 0 sebelum berganti arah.
+float Sequence0[] = {0, 12, 0, 30, 0, -30, 0, 60, 0, -60, 0};   // Mode 0: masukan (%)
+float Sequence1[] = {0, 40, 70, 30, 0};                         // Mode 1: kecepatan (%)
+float Sequence2[] = {50, 20, 50, 90, 20, 50};                   // Mode 2 dan 3: posisi (%)
+
+// Salin baris hasil desain_state_space.m ke fungsi ini.
+void gain_setup() {
+  ModelK = 0.8500;  ModelTau = 60.00;  ModelC = 0.02000;
+  Kspeed = 0.9959;  Nspeed = 2.1723;
+  Kpos = 0.5419;    Kvel = 0.2654;
+  Lp1 = 0.5657;     Lp2 = 0.4436;
+  Lv1 = 0.1842;     Lv2 = 0.2400;
+
+  // PID posisi terbaik Modul 3 (Mode 3). Ki dalam 1/ms, Kd dalam ms.
+  // Nilai bawaan berasal dari contoh simulasi Modul 3; ganti dengan hasil kelompok.
+  Kp = 0.6;
+  Ki = 0.0;
+  Kd = 20.0;
+}
 // ===========================================================================
 
 unsigned long Time, StartTime, LastTime, StepStart;
-unsigned int TimeSampling = 10, DeltaTime;   // waktu cacah (ms)
-unsigned int HoldTime = 3000;                // lama tiap nilai Sequence (ms)
-byte Mode = 0;
-bool UseObserver = true;
-float UMax = 40.0;                           // batas masukan pada Mode 2 (%)
+unsigned int DeltaTime;
 
-float Sequence[] = {0, 30, 0, -30, 0, 60, 0, -60, 0};
-const byte SequenceLength = sizeof(Sequence) / sizeof(Sequence[0]);
+float *Sequence;
+byte SequenceLength, Index = 0, Pass = 0;
+bool Finished = false;
 
-byte Index = 0;
 float Reference = 0.0, PositionMeasured = 0.0, Tacho = 0.0;
 float SpeedSign = 1.0, VelocitySigned = 0.0, U = 0.0, Motor = 0.0;
-bool Finished = false;
+
+void select_sequence() {
+  if (Mode == 0) {
+    Sequence = Sequence0;
+    SequenceLength = sizeof(Sequence0) / sizeof(Sequence0[0]);
+  }
+  else if (Mode == 1) {
+    Sequence = Sequence1;
+    SequenceLength = sizeof(Sequence1) / sizeof(Sequence1[0]);
+  }
+  else {
+    Sequence = Sequence2;
+    SequenceLength = sizeof(Sequence2) / sizeof(Sequence2[0]);
+  }
+}
+
+void print_configuration() {
+  Serial.print("# Modul 4  Mode="); Serial.print(Mode);
+  Serial.print("  UseObserver="); Serial.print(UseObserver ? 1 : 0);
+  Serial.print("  Ts="); Serial.print(TimeSampling);
+  Serial.print("  UMax="); Serial.print(UMax);
+  Serial.print("  ErrorBand="); Serial.println(ErrorBand);
+  Serial.print("# Ad12="); Serial.print(Ad12, 5);
+  Serial.print("  Ad22="); Serial.print(Ad22, 5);
+  Serial.print("  Bd1="); Serial.print(Bd1, 5);
+  Serial.print("  Bd2="); Serial.println(Bd2, 5);
+  Serial.print("# Kspeed="); Serial.print(Kspeed, 4);
+  Serial.print("  Nspeed="); Serial.print(Nspeed, 4);
+  Serial.print("  Kpos="); Serial.print(Kpos, 4);
+  Serial.print("  Kvel="); Serial.println(Kvel, 4);
+  Serial.print("# Lp1="); Serial.print(Lp1, 4);
+  Serial.print("  Lp2="); Serial.print(Lp2, 4);
+  Serial.print("  Lv1="); Serial.print(Lv1, 4);
+  Serial.print("  Lv2="); Serial.println(Lv2, 4);
+  Serial.print("# Kp="); Serial.print(Kp, 4);
+  Serial.print("  Ki="); Serial.print(Ki, 6);
+  Serial.print("  Kd="); Serial.print(Kd, 4);
+  Serial.print("  DeadZone="); Serial.print(DeadZonePositif);
+  Serial.print("/"); Serial.println(DeadZoneNegatif);
+}
 
 void setup() {
   general_setup();
   sensor_setup();
   actuator_setup();
 
-  // Parameter model dan gain hasil desain_state_space.m
-  ModelK = 0.85;  ModelTau = 60.0;  ModelC = 0.02;
-  Kspeed = 0.0;   Nspeed = 1.0;
-  Kpos = 0.5;     Kvel = 0.25;
-  Lp1 = 0.5;      Lp2 = 0.4;
-  Lv1 = 0.0;      Lv2 = 0.0;
-
+  gain_setup();
   state_space_setup(TimeSampling);
+  OutputMin = -UMax;   // batas PID Mode 3
+  OutputMax = UMax;
+  control_reset();
+  select_sequence();
   observer_reset(smooth_position_percentage(), 0.0);
 
+  print_configuration();
   Serial.println("Time\tDelta\tRef\tPos\tPosHat\tPosHatT\tVelT\tVelHat\tU");
   StartTime = millis();
   LastTime = StartTime;
@@ -677,6 +764,7 @@ void loop() {
     DeltaTime = Time - LastTime;
     LastTime = Time;
 
+    // 1. Pengukuran
     Reference = Sequence[Index];
     PositionMeasured = smooth_position_percentage();
     Tacho = smooth_velocity_percentage();
@@ -686,7 +774,8 @@ void loop() {
     if (Direction != 0) SpeedSign = (float) Direction;
     VelocitySigned = SpeedSign * Tacho;
 
-    if (Finished && Mode != 2) {
+    // 2. Aksi kontrol
+    if (Finished && Mode < 2) {
       U = 0.0;
     }
     else if (Mode == 0) {
@@ -699,16 +788,27 @@ void loop() {
       if (U < 0.0) U = 0.0;
     }
     else {
-      float Velocity = UseObserver ? VelHat : VelocitySigned;
-      U = -(Kpos * wrap_error(PositionMeasured - Reference) + Kvel * Velocity);
-      if (U > UMax) U = UMax;
-      if (U < -UMax) U = -UMax;
+      float Error = wrap_error(Reference - PositionMeasured);
+      if (Mode == 2) {
+        float Velocity = UseObserver ? VelHat : VelocitySigned;
+        U = Kpos * Error - Kvel * Velocity;   // = -(Kpos*wrap(p - r) + Kvel*v)
+        if (U > UMax) U = UMax;
+        if (U < -UMax) U = -UMax;
+      }
+      else {
+        U = control(Error, TimeSampling);     // dibatasi OutputMin dan OutputMax
+      }
+      if (Error <= ErrorBand && Error >= -ErrorBand) U = 0.0;
     }
 
+    // 3. Masukan ke motor melalui kompensasi deadzone
     Motor = run_motor(compensation(U));
     if (Motor == 0.0 && U != 0.0) U = 0.0;   // satu cacah pengereman saat arah berbalik
+
+    // 4. Pembaruan observer dengan masukan yang benar-benar diberikan
     observer_update(PositionMeasured, VelocitySigned, U);
 
+    // 5. Pengiriman data
     Serial.print(Time - StartTime);
     Serial.print("\t");
     Serial.print(DeltaTime);
@@ -727,10 +827,19 @@ void loop() {
     Serial.print("\t");
     Serial.println(U);
 
+    // 6. Perpindahan ke nilai urutan berikutnya
     if (!Finished && Time - StepStart >= HoldTime) {
       StepStart = Time;
-      if (Index < SequenceLength - 1) Index++;
-      else Finished = true;
+      if (Index < SequenceLength - 1) {
+        Index++;
+      }
+      else if (Pass < Repeat - 1) {
+        Pass++;
+        Index = 0;
+      }
+      else {
+        Finished = true;
+      }
     }
   }
 }
@@ -751,7 +860,8 @@ void loop() {
 %   3. menghitung gain observer kecepatan dari potensiometer (observer A)
 %      dan estimator posisi dari tachometer (observer B),
 %   4. mensimulasikan sistem dengan waktu tunda, saturasi, dan derau sensor,
-%   5. menampilkan baris program untuk disalin ke 11_main_state_space.ino.
+%   5. menampilkan baris program untuk disalin ke gain_setup() pada tab 9_main.ino
+%      (sketch SKD_Modul4).
 
 clc; clear; close all;
 
@@ -805,13 +915,13 @@ fprintf('\nKutub kontrol posisi : %s\n', mat2str(eig(A - B*Kf).', 4));
 fprintf('Kutub observer A     : %s\n', mat2str(eig(A - Lp*Cpos).', 4));
 fprintf('Kutub observer B     : %s\n', mat2str(eig(A - Lv*Cvel).', 4));
 
-fprintf('\n// ---- salin ke setup() pada 11_main_state_space.ino ----\n');
-fprintf('ModelK = %.4f;  ModelTau = %.2f;  ModelC = %.5f;\n', K, Tau, C);
-fprintf('Kspeed = %.4f;  Nspeed = %.4f;\n', Kspeed, Nspeed);
-fprintf('Kpos = %.4f;  Kvel = %.4f;\n', Kpos, Kvel);
-fprintf('Lp1 = %.4f;  Lp2 = %.4f;\n', Lp(1), Lp(2));
-fprintf('Lv1 = %.4f;  Lv2 = %.4f;\n', Lv(1), Lv(2));
-fprintf('// TimeSampling = %g;\n', Ts);
+fprintf('\n// ---- salin ke gain_setup() pada tab 9_main.ino ----\n');
+fprintf('  ModelK = %.4f;  ModelTau = %.2f;  ModelC = %.5f;\n', K, Tau, C);
+fprintf('  Kspeed = %.4f;  Nspeed = %.4f;\n', Kspeed, Nspeed);
+fprintf('  Kpos = %.4f;    Kvel = %.4f;\n', Kpos, Kvel);
+fprintf('  Lp1 = %.4f;     Lp2 = %.4f;\n', Lp(1), Lp(2));
+fprintf('  Lv1 = %.4f;     Lv2 = %.4f;\n', Lv(1), Lv(2));
+fprintf('// ---- atur juga pada bagian KONFIGURASI: TimeSampling = %g; UMax = %g; ----\n', Ts, UMax);
 
 %% 7. Simulasi
 Prm = struct('K', K, 'Tau', Tau, 'Theta', Theta, 'C', C, 'Ts', Ts, 'UMax', UMax, ...
@@ -909,8 +1019,9 @@ end
 
 \begin{lstlisting}[language=Matlab, morekeywords={readmatrix}, caption={Skrip MATLAB \texttt{analisis\_observer.m}},label={lst:analisis}]
 %% analisis_observer.m
-% Analisis data percobaan observer (Modul 4) dari program 11_main_state_space.
+% Analisis data percobaan observer (Modul 4) dari sketch SKD_Modul4 (Mode 0).
 % Kolom data: Time | Delta | Ref | Pos | PosHat | PosHatT | VelT | VelHat | U
+% Baris konfigurasi (diawali '#') dan baris judul kolom diabaikan otomatis.
 
 clc; clear; close all;
 
@@ -918,7 +1029,8 @@ NamaFile = 'data_observer.txt';
 C  = 0.02;          % konversi kecepatan ke laju posisi (%/ms per %), dari Modul 3
 VelMin = 5;         % batas kecepatan (%) untuk membandingkan estimasi dengan tachometer
 
-Data = readmatrix(NamaFile);
+Data = readmatrix(NamaFile, 'FileType', 'text', 'Delimiter', '\t', ...
+    'NumHeaderLines', 0, 'CommentStyle', '#');
 Data = Data(all(~isnan(Data(:, 1:9)), 2), :);
 t      = Data(:,1) - Data(1,1);
 Ref    = Data(:,3);

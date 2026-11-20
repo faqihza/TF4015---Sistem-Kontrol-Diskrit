@@ -1,0 +1,56 @@
+PROGRAM PRAKTIKUM MODUL 4 - POLE PLACEMENT DAN OBSERVER
+TF4015 Sistem Kontrol Diskrit
+
+ISI FOLDER
+  SKD_Modul4/              Sketch Arduino lengkap (buka SKD_Modul4.ino)
+    SKD_Modul4.ino         tab utama (inisialisasi serial)
+    1_sensor.ino           tachometer (A0) dan potensiometer (A1)
+    2_actuator.ino         DAC MCP4725 dan driver L293D
+    3_serial.ino           pembacaan Serial Monitor (tidak dipakai Modul 4)
+    4_compensation.ino     kompensasi deadzone
+    5_control.ino          PID diskrit (dipakai Mode 3)
+    6_state_space.ino      model ruang keadaan, umpan balik keadaan, observer
+    9_main.ino             program utama: KONFIGURASI, setup(), loop()
+  matlab/
+    desain_state_space.m   desain gain dan simulasi
+    analisis_observer.m    analisis data Percobaan 3
+
+PERSIAPAN
+  1. Pasang library "Adafruit MCP4725" (beserta "Adafruit BusIO") melalui
+     Library Manager Arduino IDE.
+  2. Buka SKD_Modul4/SKD_Modul4.ino. Folder harus bernama SKD_Modul4 dan
+     berisi seluruh tab di atas. Pilih board Arduino UNO, lalu Verify.
+  3. Isi DeadZonePositif dan DeadZoneNegatif pada 4_compensation.ino dengan
+     hasil Modul 1 atau Modul 3. Nilai ini sangat menentukan offset kontrol
+     posisi.
+  4. Isi parameter model (K, Tau, Theta, C, Ts) pada desain_state_space.m,
+     jalankan, lalu salin baris keluarannya ke fungsi gain_setup() di
+     9_main.ino.
+
+PENGATURAN TIAP PERCOBAAN (bagian KONFIGURASI di 9_main.ino)
+  Percobaan 2  Pole placement kecepatan
+               Mode = 1; urutan Sequence1 = {0, 40, 70, 30, 0}
+  Percobaan 3  Uji observer kalang terbuka
+               Mode = 0; ganti 12 pada Sequence0 dengan u_kecil kelompok
+               Uji simpangan observer B: Repeat = 3
+  Percobaan 4  Pole placement posisi
+               Mode = 2; UseObserver = true (observer) atau false (tachometer)
+               Repeat = 1; urutan Sequence2 = {50, 20, 50, 90, 20, 50}
+               Pembanding Modul 3: Mode = 3, isi Kp, Ki, Kd di gain_setup()
+  Atur juga TimeSampling sesuai desain dan UMax sesuai Modul 3.
+
+DATA
+  Baud rate 115200. Data dimulai saat Serial Monitor dibuka (board reset).
+  Baris diawali '#' berisi konfigurasi dan matriks A, B; simpan bersama data.
+  Kolom: Time Delta Ref Pos PosHat PosHatT VelT VelHat U
+  Periksa kolom Delta: nilainya harus sama dengan TimeSampling.
+  Simpan data Percobaan 3 sebagai data_observer.txt untuk analisis_observer.m.
+
+KESELAMATAN
+  Verifikasi setiap program tanpa daya motor terlebih dahulu. Mulailah dengan
+  kutub kontrol yang lambat. Cabut kabel 220 V bila motor berosilasi keras.
+
+CATATAN TEKNIS
+  Variabel matriks diskrit bernama Ad12, Ad22, Bd1, Bd2 karena B1 sudah
+  didefinisikan Arduino sebagai konstanta biner (binary.h).
+  Ukuran program: sekitar 14,7 KB flash (45%) dan 947 byte RAM (46%) pada UNO.
