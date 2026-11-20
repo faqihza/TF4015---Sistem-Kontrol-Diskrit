@@ -12,7 +12,8 @@
 %   3. menghitung gain observer kecepatan dari potensiometer (observer A)
 %      dan estimator posisi dari tachometer (observer B),
 %   4. mensimulasikan sistem dengan waktu tunda, saturasi, dan derau sensor,
-%   5. menampilkan baris program untuk disalin ke 11_main_state_space.ino.
+%   5. menampilkan baris program untuk disalin ke gain_setup() pada tab 9_main.ino
+%      (sketch SKD_Modul4).
 
 clc; clear; close all;
 
@@ -66,13 +67,13 @@ fprintf('\nKutub kontrol posisi : %s\n', mat2str(eig(A - B*Kf).', 4));
 fprintf('Kutub observer A     : %s\n', mat2str(eig(A - Lp*Cpos).', 4));
 fprintf('Kutub observer B     : %s\n', mat2str(eig(A - Lv*Cvel).', 4));
 
-fprintf('\n// ---- salin ke setup() pada 11_main_state_space.ino ----\n');
-fprintf('ModelK = %.4f;  ModelTau = %.2f;  ModelC = %.5f;\n', K, Tau, C);
-fprintf('Kspeed = %.4f;  Nspeed = %.4f;\n', Kspeed, Nspeed);
-fprintf('Kpos = %.4f;  Kvel = %.4f;\n', Kpos, Kvel);
-fprintf('Lp1 = %.4f;  Lp2 = %.4f;\n', Lp(1), Lp(2));
-fprintf('Lv1 = %.4f;  Lv2 = %.4f;\n', Lv(1), Lv(2));
-fprintf('// TimeSampling = %g;\n', Ts);
+fprintf('\n// ---- salin ke gain_setup() pada tab 9_main.ino ----\n');
+fprintf('  ModelK = %.4f;  ModelTau = %.2f;  ModelC = %.5f;\n', K, Tau, C);
+fprintf('  Kspeed = %.4f;  Nspeed = %.4f;\n', Kspeed, Nspeed);
+fprintf('  Kpos = %.4f;    Kvel = %.4f;\n', Kpos, Kvel);
+fprintf('  Lp1 = %.4f;     Lp2 = %.4f;\n', Lp(1), Lp(2));
+fprintf('  Lv1 = %.4f;     Lv2 = %.4f;\n', Lv(1), Lv(2));
+fprintf('// ---- atur juga pada bagian KONFIGURASI: TimeSampling = %g; UMax = %g; ----\n', Ts, UMax);
 
 %% 7. Simulasi
 Prm = struct('K', K, 'Tau', Tau, 'Theta', Theta, 'C', C, 'Ts', Ts, 'UMax', UMax, ...

@@ -1,0 +1,56 @@
+PROGRAM PRAKTIKUM MODUL 3 - KONTROL POSISI MOTOR DC
+TF4015 Sistem Kontrol Diskrit
+
+ISI FOLDER
+  SKD_Modul3/                  Sketch Arduino lengkap (buka SKD_Modul3.ino)
+    SKD_Modul3.ino             tab utama (inisialisasi serial)
+    1_sensor.ino               tachometer (A0) dan potensiometer (A1)
+    2_actuator.ino             DAC MCP4725 dan driver L293D
+    3_serial.ino               pembacaan Serial Monitor (kalang terbuka)
+    4_compensation.ino         kompensasi deadzone
+    5_control.ino              PID diskrit dengan anti-windup (versi Modul 2)
+    9_main.ino                 program utama: KONFIGURASI, setup(), loop()
+  matlab/
+    simulasi_kontrol_posisi.m  simulasi, Kcr/Pcr, dan tabel Ziegler-Nichols (Percobaan 1)
+    hitung_konversi.m          faktor konversi C dari data kalang terbuka (Percobaan 2)
+    analisis_kontrol_posisi.m  td, tr, Mp, ts, offset tiap perubahan set point (Percobaan 4)
+
+PERSIAPAN
+  1. Pasang library "Adafruit MCP4725" (beserta "Adafruit BusIO") melalui
+     Library Manager Arduino IDE.
+  2. Buka SKD_Modul3/SKD_Modul3.ino. Folder harus bernama SKD_Modul3 dan
+     berisi seluruh tab di atas. Pilih board Arduino UNO, lalu Verify.
+  3. Serial Monitor: baud rate 115200, akhir baris "Newline".
+  4. Isi DeadZonePositif dan DeadZoneNegatif pada 4_compensation.ino dengan
+     hasil Modul 1 (diperiksa lagi pada Percobaan 3).
+
+PENGATURAN TIAP PERCOBAAN (bagian KONFIGURASI di 9_main.ino)
+  Percobaan 1  Hanya MATLAB: simulasi_kontrol_posisi.m.
+  Percobaan 2  ClosedLoop = false. Kirim 20, tahan sekitar 3 detik, kirim 0;
+               ulangi untuk 30 dan 40. Simpan seluruh data sebagai
+               data_konversi.txt lalu jalankan hitung_konversi.m.
+               Bila C negatif, laporkan kepada asisten sebelum Percobaan 4.
+  Percobaan 3  ClosedLoop = false. Kirim berbagai masukan -100 hingga 100
+               (kembali ke 0 sebelum berganti arah). Isi UMax sesuai hasil
+               klasifikasi; program mengatur OutputMin = -UMax, OutputMax = UMax.
+  Percobaan 4  ClosedLoop = true, TimeSampling = Ts,
+               SetPointSequence = {50, 20, 50, 90, 20, 50}.
+               Isi Kp, Ki, Kd di gain_setup() (Ki dalam 1/ms, Kd dalam ms).
+               Simpan data sebagai data_kontrol.txt lalu jalankan
+               analisis_kontrol_posisi.m. ErrorBand dapat dipakai saat
+               penalaan halus. Setelah urutan selesai, set point terakhir
+               dipertahankan untuk uji gangguan.
+
+DATA
+  Data dimulai saat Serial Monitor dibuka (board reset).
+  Baris diawali '#' berisi konfigurasi dan gain; simpan bersama data.
+  Kolom: Time Delta SP Pos Kec MV Motor
+  Periksa kolom Delta: nilainya harus sama dengan TimeSampling.
+
+KESELAMATAN
+  Verifikasi setiap program tanpa daya motor terlebih dahulu. Mulailah dengan
+  Kp dan UMax kecil. Cabut kabel 220 V bila motor berosilasi keras atau
+  berputar terus-menerus.
+
+CATATAN TEKNIS
+  Ukuran program: sekitar 12,6 KB flash (38%) dan 690 byte RAM (34%) pada UNO.

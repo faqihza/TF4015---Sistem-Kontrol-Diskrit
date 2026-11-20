@@ -148,8 +148,8 @@ Setelah menyelesaikan Modul 3, praktikan diharapkan mampu:
 2 & Laptop dengan Arduino IDE dan \textit{library} Adafruit MCP4725 & Milik praktikan \\
 3 & MATLAB (desktop atau MATLAB Online) & Milik praktikan \\
 4 & Perangkat lunak \textit{spreadsheet} & Milik praktikan \\
-5 & Program: \prog{5\_control.ino} (versi Modul 2), \prog{10\_main\_kontrol\_posisi} & Unduh dari repositori \\
-6 & Skrip MATLAB \prog{simulasi\_kontrol\_posisi.m} & Unduh dari repositori \\
+5 & Sketch lengkap \prog{SKD\_Modul3} (seluruh tab, termasuk \prog{5\_control.ino} dan program utama \prog{9\_main.ino}) & Unduh dari repositori \\
+6 & Skrip MATLAB \prog{simulasi\_kontrol\_posisi.m}, \prog{hitung\_konversi.m}, dan \prog{analisis\_kontrol\_posisi.m} & Unduh dari repositori \\
 7 & Model final Modul 1 dan pengontrol terbaik Modul 2 & Hasil praktikum sebelumnya \\
 \hline
 \end{tabularx}
@@ -159,7 +159,7 @@ Setelah menyelesaikan Modul 3, praktikan diharapkan mampu:
 \begin{enumerate}
 \item Siapkan model final Modul 1 dan tabel spesifikasi kit (terutama masukan minimum putar motor).
 \item Hitung faktor konversi $C$ secara analitik (Bagian~\ref{sec:model_posisi}) dan jalankan skrip \prog{simulasi\_kontrol\_posisi.m} dengan model kelompok.
-\item Pahami program \prog{10\_main\_kontrol\_posisi} (Kode~\ref{lst:main}), terutama fungsi \texttt{wrap\_error()}.
+\item Buka sketch \prog{SKD\_Modul3} pada Arduino IDE. Sketch ini sudah berisi seluruh tab yang dibutuhkan, sehingga tidak ada tab yang perlu diganti. Pastikan \textit{library} Adafruit MCP4725 terpasang, lalu lakukan \textit{Verify}. Pahami tab \prog{9\_main.ino} (Kode~\ref{lst:main}), terutama bagian \texttt{KONFIGURASI} dan fungsi \texttt{wrap\_error()}.
 \item Baca prosedur dan bagian analisis, lalu bagi tugas dalam kelompok. Percobaan~1 dapat dikerjakan sebelum praktikum.
 \end{enumerate}
 
@@ -307,10 +307,10 @@ PID tanpa \textit{overshoot} & & & & & \\
 
 \subsection{Percobaan 2: Validasi Faktor Konversi Kecepatan--Posisi}
 \begin{enumerate}
-\item Ganti tab \prog{9\_main.ino} dengan program \prog{10\_main\_kontrol\_posisi} dan atur \texttt{ClosedLoop = false}. Unggah, verifikasi tanpa daya motor, lalu hubungkan kabel listrik 220~V.
-\item Kirim masukan \texttt{20} melalui \textit{Serial Monitor}. Setelah kecepatan tunak, rekam data selama sekitar 2 detik, lalu kirim \texttt{0}.
+\item Pada bagian \texttt{KONFIGURASI} di tab \prog{9\_main.ino}, atur \texttt{ClosedLoop = false}. Unggah, atur akhir baris \textit{Serial Monitor} menjadi \textit{Newline}, verifikasi tanpa daya motor, lalu hubungkan kabel listrik 220~V.
+\item Kirim masukan \texttt{20} melalui \textit{Serial Monitor}. Tahan sekitar 3 detik (kecepatan tunak ditambah sekitar 2 detik data), lalu kirim \texttt{0}.
 \item Ulangi untuk masukan \texttt{30} dan \texttt{40}.
-\item Untuk setiap masukan, buka (\textit{unwrap}) bacaan posisi sehingga tidak berpindah dari 100 ke 0, lalu hitung kemiringan posisi terhadap waktu (\%/ms) dengan regresi linier. Bagi kemiringan tersebut dengan rata-rata kecepatan terukur untuk memperoleh $C$.
+\item Untuk setiap masukan, buka (\textit{unwrap}) bacaan posisi sehingga tidak berpindah dari 100 ke 0, lalu hitung kemiringan posisi terhadap waktu (\%/ms) dengan regresi linier. Bagi kemiringan tersebut dengan rata-rata kecepatan terukur untuk memperoleh $C$. Langkah ini dapat dikerjakan dengan skrip \prog{hitung\_konversi.m} (Kode~\ref{lst:konversi}): simpan seluruh data percobaan ini sebagai \prog{data\_konversi.txt}, lalu jalankan skrip. Skrip juga memeriksa tanda $C$; nilai negatif berarti masukan positif menurunkan bacaan posisi sehingga kontrol posisi akan menjauhi set point.
 \item Lengkapi Tabel~\ref{tab:p2_konversi}, lalu isi kolom ``eksperimen'' pada Tabel~\ref{tab:p1_model} dengan rata-rata nilai $C$. Bila nilai eksperimen berbeda jauh dengan nilai analitik, gunakan nilai eksperimen untuk simulasi selanjutnya.
 \end{enumerate}
 
@@ -335,7 +335,7 @@ PID tanpa \textit{overshoot} & & & & & \\
 \begin{enumerate}
 \item Tetap dengan \texttt{ClosedLoop = false}, kirim berbagai masukan pada rentang $-100$ hingga $100$ (kembali ke \texttt{0} sebelum mengubah arah). Amati bacaan posisi menggunakan \textit{Serial Plotter}.
 \item Klasifikasikan pengamatan secara kualitatif, misalnya: motor tidak bergerak, posisi bergerak pelan dan mudah diamati, atau posisi bergerak terlalu cepat sehingga sulit diamati. Lengkapi Tabel~\ref{tab:p3_klasifikasi}.
-\item Berdasarkan klasifikasi tersebut, tentukan batas aksi kontrol $U_{maks}$ dan isikan pada \texttt{OutputMin} dan \texttt{OutputMax} di \texttt{setup()}.
+\item Berdasarkan klasifikasi tersebut, tentukan batas aksi kontrol $U_{maks}$ dan isikan pada \texttt{UMax} di bagian \texttt{KONFIGURASI}. Program mengatur \texttt{OutputMin} $= -U_{maks}$ dan \texttt{OutputMax} $= U_{maks}$.
 \item Periksa kompensasi \textit{deadzone}. Bila perlu, ubah \texttt{DeadZonePositif} dan \texttt{DeadZoneNegatif} sesuai masukan minimum putar motor (Modul 1) agar masukan kecil langsung menggerakkan posisi. Catat nilai yang digunakan.
 \end{enumerate}
 
@@ -358,8 +358,8 @@ PID tanpa \textit{overshoot} & & & & & \\
 
 \subsection{Percobaan 4: Implementasi Kontrol Posisi}
 \begin{enumerate}
-\item Atur \texttt{ClosedLoop = true}, \texttt{TimeSampling} $= T_s$, dan \texttt{SetPointSequence = \{50, 20, 50, 90, 20, 50\}}. Program menahan setiap set point selama \texttt{HoldTime}.
-\item Untuk setiap parameter pada Tabel~\ref{tab:p1_zn}, jalankan kontrol posisi dan simpan datanya. Mulailah dengan pengontrol yang paling kecil gainnya. Hitung performa untuk perubahan set point $50 \rightarrow 20$ dan $20 \rightarrow 50$, lalu lengkapi Tabel~\ref{tab:p4_implementasi}.
+\item Pada bagian \texttt{KONFIGURASI}, atur \texttt{ClosedLoop = true}, \texttt{TimeSampling} $= T_s$, dan \texttt{SetPointSequence = \{50, 20, 50, 90, 20, 50\}}. Isi \texttt{Kp}, \texttt{Ki}, dan \texttt{Kd} pada fungsi \texttt{gain\_setup()}. Program menahan setiap set point selama \texttt{HoldTime}.
+\item Untuk setiap parameter pada Tabel~\ref{tab:p1_zn}, jalankan kontrol posisi dan simpan datanya. Mulailah dengan pengontrol yang paling kecil gainnya. Hitung performa untuk perubahan set point $50 \rightarrow 20$ dan $20 \rightarrow 50$, lalu lengkapi Tabel~\ref{tab:p4_implementasi}. Performa dapat dihitung dengan skrip \prog{analisis\_kontrol\_posisi.m} (Kode~\ref{lst:analisis}) dari data yang disimpan sebagai \prog{data\_kontrol.txt}.
 \item Lakukan penalaan halus pada pengontrol dengan performa terbaik. Pengontrol yang digunakan tidak harus P, PI, atau PID; PD atau modifikasi lain seperti pita error (\texttt{ErrorBand}) diperbolehkan. Catat setiap modifikasi beserta alasannya.
 \item Apabila performa masih belum memuaskan setelah penalaan halus, modifikasi program lebih lanjut (misalnya kontrol \textit{on-off} dengan histeresis, atau batas aksi kontrol yang berbeda untuk error besar dan kecil).
 \item \textbf{Uji gangguan}: gunakan pengontrol terbaik. Setelah urutan set point selesai, set point terakhir (50) dipertahankan. Berikan gangguan dengan memutar roda gigi potensiometer sedikit secara manual, lalu lepaskan. Simpan respons pengontrolan terhadap gangguan.
@@ -484,55 +484,90 @@ Tugas tambahan bersifat opsional dan merupakan persiapan Modul 4.
 \appendix
 \section{Kode Program Pendukung}
 \label{lamp:kode}
-Program utama berikut menggantikan isi tab \prog{9\_main.ino}. Tab \prog{5\_control.ino} yang digunakan adalah versi Modul 2.
+Sketch \prog{SKD\_Modul3} terdiri atas tab \prog{SKD\_Modul3.ino}, \prog{1\_sensor.ino}, \prog{2\_actuator.ino}, \prog{3\_serial.ino}, \prog{4\_compensation.ino}, \prog{5\_control.ino} (versi Modul 2), dan \prog{9\_main.ino}. Berikut ditampilkan tab program utama dan skrip MATLAB. Isi tab \prog{9\_main.ino} sama dengan program \prog{10\_main\_kontrol\_posisi} pada folder program praktikum.
 
-\begin{lstlisting}[caption={Program utama \texttt{10\_main\_kontrol\_posisi}},label={lst:main}]
+\begin{lstlisting}[caption={Tab \texttt{9\_main.ino} (program utama \texttt{10\_main\_kontrol\_posisi})},label={lst:main}]
 // ===========================================================================
-// Program utama Modul 3: kontrol posisi motor DC
-// Ganti isi tab 9_main.ino dengan program ini.
+// Program utama Modul 3: kontrol posisi motor DC (10_main_kontrol_posisi)
+// Isi tab 9_main.ino pada sketch SKD_Modul3.
 //
-// ClosedLoop = false : kalang terbuka, masukan motor dikirim melalui
-//                      Serial Monitor (-100 hingga 100).
-// ClosedLoop = true  : kontrol posisi dengan set point mengikuti
+// ClosedLoop = false : kalang terbuka (Percobaan 2 dan 3). Masukan motor
+//                      dikirim melalui Serial Monitor (-100 hingga 100).
+//                      Kembali ke 0 sebelum mengubah arah putar.
+// ClosedLoop = true  : kontrol posisi (Percobaan 4). Set point mengikuti
 //                      SetPointSequence[]. Setelah urutan selesai, set point
-//                      terakhir dipertahankan (untuk uji gangguan).
+//                      terakhir dipertahankan (uji gangguan).
 // Error posisi dibatasi pada rentang -50 hingga 50 karena bacaan posisi
 // berpindah dari 100 ke 0 (dan sebaliknya).
+//
+// Kolom data: Time | Delta | SP | Pos | Kec | MV | Motor
+//   SP    : set point posisi (%), 0 pada kalang terbuka
+//   Pos   : posisi terukur potensiometer (%)
+//   Kec   : kecepatan terukur tachometer (%, tanpa tanda arah)
+//   MV    : masukan kontrol sebelum kompensasi deadzone (%)
+//   Motor : masukan ke motor setelah kompensasi deadzone (%)
+// Baris yang diawali '#' berisi konfigurasi percobaan dan bukan data.
+// ===========================================================================
+
+// ============================ KONFIGURASI ==================================
+bool ClosedLoop = true;            // false = kalang terbuka, true = kontrol posisi
+unsigned int TimeSampling = 10;    // waktu cacah (ms), waktu cacah pertama Modul 1
+unsigned int HoldTime = 3000;      // lama tiap set point (ms)
+float UMax = 40.0;                 // batas aksi kontrol (%), hasil Percobaan 3
+float ErrorBand = 0.0;             // pita error (%): aksi kontrol nol bila |e| <= ErrorBand
+
+float SetPointSequence[] = {50, 20, 50, 90, 20, 50};   // set point posisi (%)
+
+// Parameter pengontrol (Tabel Ziegler-Nichols atau hasil penalaan halus).
+// Ki = Kp/Ti dalam 1/ms, Kd = Kp*Td dalam ms.
+void gain_setup() {
+  Kp = 1.0;
+  Ki = 0.0;
+  Kd = 0.0;
+}
 // ===========================================================================
 
 unsigned long Time, StartTime, LastTime, StepStart;
-unsigned int TimeSampling = 10, DeltaTime;   // waktu cacah (ms)
-unsigned int HoldTime = 3000;                // lama tiap set point (ms)
-bool ClosedLoop = true;
-float ErrorBand = 0.0;                       // pita error (%) tempat keluaran dibuat nol
+unsigned int DeltaTime;
 
-float SetPointSequence[] = {50, 20, 50, 90, 20, 50};
 const byte SequenceLength = sizeof(SetPointSequence) / sizeof(SetPointSequence[0]);
-
 byte Index = 0;
 int InputSerial = 0;
 float SetPoint = 0.0, Position = 0.0, Speed = 0.0, Error = 0.0;
 float ManipulatedVariable = 0.0, Motor = 0.0;
 
+// Membatasi error posisi pada rentang -50 hingga 50 (jalur terpendek)
 float wrap_error(float e) {
   while (e > 50.0) e -= 100.0;
   while (e < -50.0) e += 100.0;
   return e;
 }
 
+void print_configuration() {
+  Serial.print("# Modul 3  ClosedLoop="); Serial.print(ClosedLoop ? 1 : 0);
+  Serial.print("  Ts="); Serial.print(TimeSampling);
+  Serial.print("  HoldTime="); Serial.print(HoldTime);
+  Serial.print("  UMax="); Serial.print(UMax);
+  Serial.print("  ErrorBand="); Serial.println(ErrorBand);
+  Serial.print("# Kp="); Serial.print(Kp, 4);
+  Serial.print("  Ki="); Serial.print(Ki, 6);
+  Serial.print("  Kd="); Serial.print(Kd, 4);
+  Serial.print("  DeadZone="); Serial.print(DeadZonePositif);
+  Serial.print("/"); Serial.println(DeadZoneNegatif);
+}
+
 void setup() {
   general_setup();
+  Serial.setTimeout(50);   // agar pembacaan Serial Monitor tidak menahan loop
   sensor_setup();
   actuator_setup();
 
-  // Parameter pengontrol (Ki dalam 1/ms, Kd dalam ms)
-  Kp = 1.0;
-  Ki = 0.0;
-  Kd = 0.0;
-  OutputMin = -40.0;   // batas aksi kontrol sesuai klasifikasi kalang terbuka
-  OutputMax = 40.0;
+  gain_setup();
+  OutputMin = -UMax;
+  OutputMax = UMax;
   control_reset();
 
+  print_configuration();
   Serial.println("Time\tDelta\tSP\tPos\tKec\tMV\tMotor");
   StartTime = millis();
   LastTime = StartTime;
@@ -540,15 +575,17 @@ void setup() {
 }
 
 void loop() {
-  InputSerial = serial(InputSerial);
+  if (!ClosedLoop) InputSerial = serial(InputSerial);
   Time = millis();
   if (Time - LastTime >= TimeSampling) {
     DeltaTime = Time - LastTime;
     LastTime = Time;
 
+    // 1. Pengukuran
     Position = smooth_position_percentage();
     Speed = smooth_velocity_percentage();
 
+    // 2. Aksi kontrol
     if (ClosedLoop) {
       SetPoint = SetPointSequence[Index];
       Error = wrap_error(SetPoint - Position);
@@ -560,8 +597,10 @@ void loop() {
       ManipulatedVariable = (float) InputSerial;
     }
 
+    // 3. Masukan ke motor melalui kompensasi deadzone
     Motor = run_motor(compensation(ManipulatedVariable));
 
+    // 4. Pengiriman data
     Serial.print(Time - StartTime);
     Serial.print("\t");
     Serial.print(DeltaTime);
@@ -576,6 +615,7 @@ void loop() {
     Serial.print("\t");
     Serial.println(Motor);
 
+    // 5. Perpindahan ke set point berikutnya
     if (ClosedLoop && Index < SequenceLength - 1 && Time - StepStart >= HoldTime) {
       StepStart = Time;
       Index++;
@@ -746,6 +786,155 @@ end
 function tw = waktu_pertama(t, Kondisi)
     k = find(Kondisi, 1);
     if isempty(k), tw = NaN; else, tw = t(k); end
+end
+\end{lstlisting}
+
+\begin{lstlisting}[language=Matlab, morekeywords={readmatrix,polyfit,polyval}, caption={Skrip MATLAB \texttt{hitung\_konversi.m}},label={lst:konversi}]
+%% hitung_konversi.m
+% Menghitung faktor konversi kecepatan-posisi C (Modul 3, Percobaan 2) dari
+% data kalang terbuka sketch SKD_Modul3 (ClosedLoop = false).
+% Kolom data: Time | Delta | SP | Pos | Kec | MV | Motor
+% Baris konfigurasi (diawali '#') dan baris judul kolom diabaikan otomatis.
+%
+% Data dibagi menjadi segmen dengan masukan MV tetap dan tidak nol. Pada tiap
+% segmen, bagian awal (transien) diabaikan, posisi dibuka (unwrap) agar tidak
+% berpindah dari 100 ke 0, lalu kemiringan posisi terhadap waktu dihitung
+% dengan regresi linier. C = kemiringan / kecepatan rata-rata.
+
+clc; clear; close all;
+
+NamaFile = 'data_konversi.txt';
+TAbaikan = 1000;    % lama awal tiap segmen yang diabaikan (ms)
+
+Data = readmatrix(NamaFile, 'FileType', 'text', 'Delimiter', '\t', ...
+    'NumHeaderLines', 0, 'CommentStyle', '#');
+Data = Data(all(~isnan(Data(:, 1:7)), 2), :);
+t   = Data(:,1);
+Pos = Data(:,4);
+Kec = Data(:,5);
+MV  = Data(:,6);
+PosU = buka(Pos);
+
+% Batas segmen: indeks tempat masukan berubah
+Batas = [1; find(diff(MV) ~= 0) + 1; numel(MV) + 1];
+Hasil = zeros(0, 4);
+fprintf('%9s %12s %16s %16s %12s\n', 'Masukan', 'Kec rata2', 'Kemiringan', 'C', 'Durasi');
+fprintf('%9s %12s %16s %16s %12s\n', '(%)', '(%)', '(%/ms)', '(%/(ms.%))', '(ms)');
+figure('Name', 'Faktor konversi'); hold on; grid on;
+plot(t, PosU, 'Color', [0.7 0.7 0.7]);
+for j = 1:numel(Batas) - 1
+    Idx = (Batas(j):Batas(j+1) - 1)';
+    if MV(Idx(1)) == 0, continue; end
+    Idx = Idx(t(Idx) - t(Idx(1)) >= TAbaikan);
+    if numel(Idx) < 20, continue; end
+    Pf = polyfit(t(Idx), PosU(Idx), 1);
+    V  = mean(Kec(Idx)) * sign(MV(Idx(1)));    % kecepatan bertanda sesuai arah masukan
+    C  = Pf(1) / V;
+    Hasil(end+1, :) = [MV(Idx(1)), V, Pf(1), C]; %#ok<SAGROW>
+    fprintf('%9.0f %12.2f %16.5f %16.5f %12.0f\n', MV(Idx(1)), V, Pf(1), C, t(Idx(end)) - t(Idx(1)));
+    plot(t(Idx), polyval(Pf, t(Idx)), 'r', 'LineWidth', 1.5);
+end
+xlabel('Waktu (ms)'); ylabel('Posisi tanpa batas 0-100 (%)');
+legend('Posisi (unwrap)', 'Regresi tiap segmen', 'Location', 'best');
+
+if isempty(Hasil)
+    fprintf('\nTidak ada segmen yang cukup panjang. Tahan tiap masukan lebih lama dari %g ms.\n', TAbaikan);
+else
+    fprintf('\nRata-rata C = %.5f %%/(ms.%%)\n', mean(Hasil(:,4)));
+    if any(Hasil(:,4) < 0)
+        fprintf(['PERINGATAN: C bernilai negatif. Masukan positif menurunkan bacaan posisi,\n' ...
+                 'sehingga kontrol posisi akan menjauhi set point. Laporkan kepada asisten.\n']);
+    end
+end
+
+%% Fungsi bantu
+function y = buka(x)
+    % unwrap posisi dengan periode 100%
+    y = x;
+    for k = 2:numel(x)
+        dx = mod(x(k) - x(k-1) + 50, 100) - 50;
+        y(k) = y(k-1) + dx;
+    end
+end
+\end{lstlisting}
+
+\begin{lstlisting}[language=Matlab, morekeywords={readmatrix,stairs}, caption={Skrip MATLAB \texttt{analisis\_kontrol\_posisi.m}},label={lst:analisis}]
+%% analisis_kontrol_posisi.m
+% Menghitung performa kontrol posisi (Modul 3, Percobaan 4) dari data sketch
+% SKD_Modul3 (ClosedLoop = true): delay time (50%), rise time (10-90%),
+% overshoot, settling time (2%), dan offset untuk setiap perubahan set point.
+% Kolom data: Time | Delta | SP | Pos | Kec | MV | Motor
+% Baris konfigurasi (diawali '#') dan baris judul kolom diabaikan otomatis.
+%
+% Posisi dibuka (unwrap) dan target dihitung melalui jalur terpendek, sama
+% seperti fungsi wrap_error() pada program, sehingga perubahan 90 -> 20 yang
+% melewati 100/0 tetap dihitung dengan benar.
+
+clc; clear; close all;
+
+NamaFile = 'data_kontrol.txt';
+
+Data = readmatrix(NamaFile, 'FileType', 'text', 'Delimiter', '\t', ...
+    'NumHeaderLines', 0, 'CommentStyle', '#');
+Data = Data(all(~isnan(Data(:, 1:7)), 2), :);
+t   = Data(:,1);
+SP  = Data(:,3);
+Pos = Data(:,4);
+MV  = Data(:,6);
+PosU = buka(Pos);
+
+% Awal tiap segmen set point (segmen pertama dimulai dari posisi awal)
+Mulai = [1; find(diff(SP) ~= 0) + 1];
+Akhir = [Mulai(2:end) - 1; numel(SP)];
+
+fprintf('%15s %8s %8s %8s %8s %8s %8s\n', 'Step', 'td', 'tr', 'Mp', 'ts', 'Offset', '|u|maks');
+fprintf('%15s %8s %8s %8s %8s %8s %8s\n', '(%)', '(ms)', '(ms)', '(%)', '(ms)', '(%)', '(%)');
+for j = 1:numel(Mulai)
+    Idx = Mulai(j):Akhir(j);
+    if j == 1, Awal = PosU(1); Dari = Pos(1); else, Awal = PosU(Mulai(j) - 1); Dari = SP(Mulai(j) - 1); end
+    Target = Awal + bungkus(SP(Mulai(j)) - mod(Awal, 100));
+    if abs(Target - Awal) < 2, continue; end    % perubahan terlalu kecil untuk dianalisis
+    P = kinerja(t(Idx) - t(Idx(1)), PosU(Idx), Awal, Target);
+    fprintf('%6.0f -> %5.0f %8.0f %8.0f %8.1f %8.0f %8.2f %8.1f\n', Dari, SP(Mulai(j)), P, max(abs(MV(Idx))));
+end
+fprintf('\nCatatan: NaN berarti respons tidak mencapai kriteria (misalnya tidak masuk pita 2%%).\n');
+
+figure('Name', 'Kontrol posisi');
+subplot(2,1,1); stairs(t, SP, 'k--'); hold on; plot(t, Pos, 'b'); grid on;
+ylabel('Posisi (%)'); legend('Set point', 'Posisi');
+subplot(2,1,2); plot(t, MV, 'r'); grid on;
+xlabel('Waktu (ms)'); ylabel('MV (%)');
+
+%% Fungsi bantu
+function P = kinerja(t, y, Awal, SP)
+    % [delay time, rise time 10-90%, overshoot, settling time 2%, offset]
+    s = (y - Awal) / (SP - Awal);
+    sf = mean(s(end - max(1, round(0.1*numel(s))) + 1:end));
+    td = waktu_pertama(t, s >= 0.5);
+    tr = waktu_pertama(t, s >= 0.9) - waktu_pertama(t, s >= 0.1);
+    OS = max(0, (max(s) - 1) * 100);
+    Luar = find(abs(s - 1) > 0.02);
+    if isempty(Luar), ts = t(1); elseif Luar(end) < numel(t), ts = t(Luar(end) + 1); else, ts = NaN; end
+    P = [td, tr, OS, ts, (1 - sf)*(SP - Awal)];
+end
+
+function tw = waktu_pertama(t, Kondisi)
+    k = find(Kondisi, 1);
+    if isempty(k), tw = NaN; else, tw = t(k); end
+end
+
+function e = bungkus(e)
+    % Membatasi selisih posisi pada rentang -50 hingga 50
+    e = mod(e + 50, 100) - 50;
+end
+
+function y = buka(x)
+    % unwrap posisi dengan periode 100%
+    y = x;
+    for k = 2:numel(x)
+        dx = mod(x(k) - x(k-1) + 50, 100) - 50;
+        y(k) = y(k-1) + dx;
+    end
 end
 \end{lstlisting}
 

@@ -1,6 +1,7 @@
 %% analisis_observer.m
-% Analisis data percobaan observer (Modul 4) dari program 11_main_state_space.
+% Analisis data percobaan observer (Modul 4) dari sketch SKD_Modul4 (Mode 0).
 % Kolom data: Time | Delta | Ref | Pos | PosHat | PosHatT | VelT | VelHat | U
+% Baris konfigurasi (diawali '#') dan baris judul kolom diabaikan otomatis.
 
 clc; clear; close all;
 
@@ -8,7 +9,8 @@ NamaFile = 'data_observer.txt';
 C  = 0.02;          % konversi kecepatan ke laju posisi (%/ms per %), dari Modul 3
 VelMin = 5;         % batas kecepatan (%) untuk membandingkan estimasi dengan tachometer
 
-Data = readmatrix(NamaFile);
+Data = readmatrix(NamaFile, 'FileType', 'text', 'Delimiter', '\t', ...
+    'NumHeaderLines', 0, 'CommentStyle', '#');
 Data = Data(all(~isnan(Data(:, 1:9)), 2), :);
 t      = Data(:,1) - Data(1,1);
 Ref    = Data(:,3);
